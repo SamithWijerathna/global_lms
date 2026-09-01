@@ -426,7 +426,7 @@ export default function LessonStorePage() {
 
                           <div>
                             <p className="font-medium mb-3">Upload Payment Receipt</p>
-                            <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer bg-default-50 hover:bg-default-100 transition-colors">
+                            <label className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer bg-default-50 hover:bg-default-100 transition-colors overflow-hidden">
                               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-12 h-12 text-default-400 mb-4" />
                                 <p className="mb-2 text-sm text-default-600">
@@ -435,7 +435,7 @@ export default function LessonStorePage() {
                                 <p className="text-xs text-default-500">Image or PDF</p>
                               </div>
                               {preview && file?.type.startsWith("image/") && (
-                                <img src={preview} alt="Preview" className="absolute inset-0 w-full h-full object-cover rounded-xl" />
+                                <img src={preview} alt="Preview" className="absolute inset-0 w-full h-full object-contain p-2 bg-default-100/50 rounded-xl" />
                               )}
                               {file && !file.type.startsWith("image/") && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-default-100/80 rounded-xl">

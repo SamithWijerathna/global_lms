@@ -235,11 +235,11 @@ const { userData } = useAuth();
               </div>
 
               {preview && (
-                <div className="mt-3 border rounded-xl overflow-hidden">
+                <div className="mt-3 border rounded-xl overflow-hidden max-h-64 bg-gray-50 flex justify-center p-2">
                   <img
                     src={preview}
                     alt="Receipt Preview"
-                    className="w-full h-56 object-cover"
+                    className="max-h-60 w-auto object-contain rounded-lg"
                   />
                 </div>
               )}
