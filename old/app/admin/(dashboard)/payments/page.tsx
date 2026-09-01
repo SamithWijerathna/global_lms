@@ -309,15 +309,22 @@ export default function PaymentApprovalPage() {
         <ModalContent>
           <ModalHeader>Transaction Proof</ModalHeader>
           <ModalBody className="p-0">
-            {currentReceipt?.type === "image" ? (
-              <Image
-                src={'https://admin.lashinigeo.lk/'+ currentReceipt.url}
-                alt="Receipt"
-                className="w-full max-h-[80vh] object-contain"
-                removeWrapper
-              />
-            ) : currentReceipt?.type === "pdf" ? (
-              <iframe src={'https://admin.lashinigeo.lk/'+ currentReceipt.url} className="w-full h-[80vh]" title="Receipt PDF" />
+            {currentReceipt ? (
+              (() => {
+                const receiptSrc = currentReceipt.url.startsWith("http://") || currentReceipt.url.startsWith("https://")
+                  ? currentReceipt.url
+                  : currentReceipt.url.startsWith("/") ? currentReceipt.url : "/" + currentReceipt.url;
+                return currentReceipt.type === "image" ? (
+                  <Image
+                    src={receiptSrc}
+                    alt="Receipt"
+                    className="w-full max-h-[80vh] object-contain"
+                    removeWrapper
+                  />
+                ) : currentReceipt.type === "pdf" ? (
+                  <iframe src={receiptSrc} className="w-full h-[80vh]" title="Receipt PDF" />
+                ) : null;
+              })()
             ) : null}
           </ModalBody>
           <ModalFooter>

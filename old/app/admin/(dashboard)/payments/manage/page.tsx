@@ -478,20 +478,25 @@ export default function PaymentsManagementPage() {
     <ModalHeader>Payment Receipt</ModalHeader>
     <ModalBody className="p-0 flex justify-center items-center">
       {currentReceipt ? (
-        currentReceipt.type === "image" ? (
-          <Image
-            src={'https://admin.lashinigeo.lk/'+ currentReceipt.url} // Remove /payments/
-            alt="Receipt"
-            className="w-full max-h-[80vh] object-contain"
-          />
-        ) : currentReceipt.type === "pdf" ? (
-          <iframe
-            src={'https://admin.lashinigeo.lk/'+ currentReceipt.url} // Remove /payments/
-            className="w-full h-[80vh]"
-          />
-        ) : (
-          <p className="text-center text-gray-500">Unsupported file type</p>
-        )
+        (() => {
+          const receiptSrc = currentReceipt.url.startsWith("http://") || currentReceipt.url.startsWith("https://")
+            ? currentReceipt.url
+            : currentReceipt.url.startsWith("/") ? currentReceipt.url : "/" + currentReceipt.url;
+          return currentReceipt.type === "image" ? (
+            <Image
+              src={receiptSrc}
+              alt="Receipt"
+              className="w-full max-h-[80vh] object-contain"
+            />
+          ) : currentReceipt.type === "pdf" ? (
+            <iframe
+              src={receiptSrc}
+              className="w-full h-[80vh]"
+            />
+          ) : (
+            <p className="text-center text-gray-500">Unsupported file type</p>
+          );
+        })()
       ) : (
         <p className="text-center text-gray-500">No receipt available</p>
       )}
@@ -500,7 +505,7 @@ export default function PaymentsManagementPage() {
       <Button onClick={() => setReceiptModalOpen(false)}>Close</Button>
       {currentReceipt && (
         <a
-          href={'https://admin.lashinigeo.lk/'+ currentReceipt.url}
+          href={currentReceipt.url.startsWith("http://") || currentReceipt.url.startsWith("https://") ? currentReceipt.url : currentReceipt.url.startsWith("/") ? currentReceipt.url : "/" + currentReceipt.url}
           download
           className="ml-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
