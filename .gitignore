@@ -1,0 +1,34 @@
+# Dependencies
+**/node_modules/
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+**/.next/
+.next/
+**/out/
+out/
+**/build/
+build/
+**/dist/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*
+!.env.example
+
+# Uploads and temporary media
+**/public/uploads/
+public/uploads/
+**/public/uploads_backup/
+public/uploads_backup/
+
+# Logs & misc
+*.log
+.DS_Store
+*.pem
+.vercel
+*.tsbuildinfo
