@@ -21,6 +21,25 @@ export default function EditClassPage() {
 
   const confirm = useConfirm();
 
+  const [batchesList, setBatchesList] = useState<Array<{ id: number; batch_code: string; batch_name: string }>>([]);
+  const [classTypesList, setClassTypesList] = useState<Array<{ id: number; type_code: string; type_name: string }>>([]);
+
+  useEffect(() => {
+    fetch("/api/batches")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setBatchesList(data);
+      })
+      .catch((err) => console.error("Failed to load batches", err));
+
+    fetch("/api/class-types")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setClassTypesList(data);
+      })
+      .catch((err) => console.error("Failed to load class types", err));
+  }, []);
+
   const [formData, setFormData] = useState({
     class_title: "",
     class_description: "",
@@ -203,11 +222,14 @@ export default function EditClassPage() {
             <Select
               label="Batch *"
               name="batch"
-              selectedKeys={[formData.batch]}
+              selectedKeys={formData.batch ? [formData.batch] : []}
               onChange={handleInputChange}
             >
-              <SelectItem key="2027OL" textValue="2027 OL">2027 OL</SelectItem>
-              <SelectItem key="2028OL" textValue="2028 OL">2028 OL</SelectItem>
+              {batchesList.map((b) => (
+                <SelectItem key={b.batch_code} textValue={b.batch_name || b.batch_code}>
+                  {b.batch_name || b.batch_code}
+                </SelectItem>
+              ))}
             </Select>
             <Input
               label="Price (Rs) *"
@@ -221,14 +243,14 @@ export default function EditClassPage() {
             <Select
               label="Class Type"
               name="class_type"
-              selectedKeys={[formData.class_type]}
+              selectedKeys={formData.class_type ? [formData.class_type] : []}
               onChange={handleInputChange}
             >
-              <SelectItem key="theory">Theory</SelectItem>
-              <SelectItem key="physical">Paper</SelectItem>
-              <SelectItem key="revision">Revision</SelectItem>
-              <SelectItem key="revision+paper">Revision + Paper</SelectItem>
-              <SelectItem key="other">Other</SelectItem>
+              {classTypesList.map((ct) => (
+                <SelectItem key={ct.type_code} textValue={ct.type_name || ct.type_code}>
+                  {ct.type_name || ct.type_code}
+                </SelectItem>
+              ))}
             </Select>
             <Select
               label="Renew Type"

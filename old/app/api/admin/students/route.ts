@@ -62,13 +62,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }
 
-    const batchRegex = /^[0-9]{4}OL$/i;
-    if (!batchRegex.test(batch)) {
-      return NextResponse.json(
-        { error: "Invalid batch format. Use YYYYOL (e.g., 2027OL)" },
-        { status: 400 }
-      );
-    }
+
 
     /* Generate Student ID */
     const [rows]: any = await db.query(

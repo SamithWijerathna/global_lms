@@ -13,10 +13,10 @@ import { Avatar } from "@heroui/avatar";
 // Form & Inputs
 import { Input } from "@heroui/input";
 import { Switch } from "@heroui/switch";
-import { Select, SelectItem } from "@heroui/select";
 
 // Button
 import { Button } from "@heroui/button";
+import { Select, SelectItem } from "@heroui/select";
 
 // Table
 import {
@@ -37,20 +37,8 @@ import {
   ModalFooter,
 } from "@heroui/modal";
 
-// Dropdown
-import {
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownSection,
-  DropdownItem,
-} from "@heroui/dropdown";
-
-
 import { useAdminAuth } from "@/src/lib/useAdminAuth";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTheme } from "next-themes";
-import { useIsSSR } from "@react-aria/ssr";
 import { Suspense } from "react";
 
 interface User {
@@ -109,11 +97,35 @@ function SettingsContent() {
     password: "",
   });
 
+  // Batch Customizer states
+  const [batches, setBatches] = useState<any[]>([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [editingBatch, setEditingBatch] = useState<any>(null);
+  const [batchForm, setBatchForm] = useState({
+    batch_code: "",
+    batch_name: "",
+    description: "",
+    is_active: true,
+  });
+
+  // Class Type Customizer states
+  const [classTypes, setClassTypes] = useState<any[]>([]);
+  const [classTypesLoading, setClassTypesLoading] = useState(false);
+  const [classTypeModalOpen, setClassTypeModalOpen] = useState(false);
+  const [editingClassType, setEditingClassType] = useState<any>(null);
+  const [classTypeForm, setClassTypeForm] = useState({
+    type_code: "",
+    type_name: "",
+    description: "",
+    is_active: true,
+  });
+
   const userRole = user?.role?.toLowerCase() || "";
   const isSuperOrHigher = ["superuser", "developer", "admin"].includes(userRole);
   const isDeveloper = ["developer", "superuser", "admin"].includes(userRole);
 
-  // Apply theme (user preference > system preference)
+  // Apply theme
   useEffect(() => {
     if (!user) return;
 
@@ -166,9 +178,57 @@ function SettingsContent() {
     }
   }, [selected, isAuthenticated, isSuperOrHigher]);
 
-  // Block User Management tab if no permission
+  // Fetch batches for Batch Management tab
+  const fetchBatches = async () => {
+    setBatchesLoading(true);
+    try {
+      const res = await fetch("/api/batches?all=true");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setBatches(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch batches:", err);
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (!loading && !isSuperOrHigher && selected === "usermanagement") {
+    if (selected === "batchmanagement" && isAuthenticated && isSuperOrHigher) {
+      fetchBatches();
+    }
+  }, [selected, isAuthenticated, isSuperOrHigher]);
+
+  // Fetch class types for Class Type Management tab
+  const fetchClassTypes = async () => {
+    setClassTypesLoading(true);
+    try {
+      const res = await fetch("/api/class-types?all=true");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setClassTypes(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch class types:", err);
+    } finally {
+      setClassTypesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selected === "classtypemanagement" && isAuthenticated && isSuperOrHigher) {
+      fetchClassTypes();
+    }
+  }, [selected, isAuthenticated, isSuperOrHigher]);
+
+  // Block protected tabs if no permission
+  useEffect(() => {
+    if (
+      !loading &&
+      !isSuperOrHigher &&
+      (selected === "usermanagement" || selected === "batchmanagement" || selected === "classtypemanagement")
+    ) {
       setSelected("profile");
     }
   }, [loading, isSuperOrHigher, selected]);
@@ -225,6 +285,7 @@ function SettingsContent() {
     }
   };
 
+  // User modal functions
   const openUserModal = (u?: any) => {
     if (u) {
       setEditingUser(u);
@@ -275,11 +336,122 @@ function SettingsContent() {
     }
   };
 
-  const handleLogout = async () => {
-    const fd = new FormData();
-    fd.append("action", "logout");
-    await fetch("/api/admin/auth", { method: "POST", body: fd });
-    router.push("/admin/login");
+  // Batch modal functions
+  const openBatchModal = (b?: any) => {
+    if (b) {
+      setEditingBatch(b);
+      setBatchForm({
+        batch_code: b.batch_code || "",
+        batch_name: b.batch_name || "",
+        description: b.description || "",
+        is_active: b.is_active === 1 || b.is_active === true,
+      });
+    } else {
+      setEditingBatch(null);
+      setBatchForm({ batch_code: "", batch_name: "", description: "", is_active: true });
+    }
+    setBatchModalOpen(true);
+  };
+
+  const handleSaveBatch = async () => {
+    if (!batchForm.batch_code || !batchForm.batch_name) {
+      alert("Batch code and Batch name are required");
+      return;
+    }
+
+    const payload = {
+      ...(editingBatch ? { id: editingBatch.id } : {}),
+      batch_code: batchForm.batch_code,
+      batch_name: batchForm.batch_name,
+      description: batchForm.description,
+      is_active: batchForm.is_active ? 1 : 0,
+    };
+
+    const method = editingBatch ? "PUT" : "POST";
+    const res = await fetch("/api/batches", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      await fetchBatches();
+      setBatchModalOpen(false);
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to save batch");
+    }
+  };
+
+  const handleDeleteBatch = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this batch?")) return;
+
+    const res = await fetch(`/api/batches?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      await fetchBatches();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to delete batch");
+    }
+  };
+
+  // Class Type modal functions
+  const openClassTypeModal = (ct?: any) => {
+    if (ct) {
+      setEditingClassType(ct);
+      setClassTypeForm({
+        type_code: ct.type_code || "",
+        type_name: ct.type_name || "",
+        description: ct.description || "",
+        is_active: ct.is_active === 1 || ct.is_active === true,
+      });
+    } else {
+      setEditingClassType(null);
+      setClassTypeForm({ type_code: "", type_name: "", description: "", is_active: true });
+    }
+    setClassTypeModalOpen(true);
+  };
+
+  const handleSaveClassType = async () => {
+    if (!classTypeForm.type_code || !classTypeForm.type_name) {
+      alert("Type code and Type name are required");
+      return;
+    }
+
+    const payload = {
+      ...(editingClassType ? { id: editingClassType.id } : {}),
+      type_code: classTypeForm.type_code,
+      type_name: classTypeForm.type_name,
+      description: classTypeForm.description,
+      is_active: classTypeForm.is_active ? 1 : 0,
+    };
+
+    const method = editingClassType ? "PUT" : "POST";
+    const res = await fetch("/api/class-types", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      await fetchClassTypes();
+      setClassTypeModalOpen(false);
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to save class type");
+    }
+  };
+
+  const handleDeleteClassType = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this class type?")) return;
+
+    const res = await fetch(`/api/class-types?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      await fetchClassTypes();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to delete class type");
+    }
   };
 
   if (loading) return <div className="p-8">Loading...</div>;
@@ -291,8 +463,7 @@ function SettingsContent() {
     <div className="min-h-screen p-8">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        
+        <h1 className="text-3xl font-bold">Admin Settings & Configuration</h1>
       </div>
 
       <Tabs
@@ -379,11 +550,111 @@ function SettingsContent() {
                 </div>
                 <Switch isSelected={isDark} onValueChange={toggleTheme} />
               </div>
-
-              {/* Add more LMS-style preferences here later (language, notifications, date format, etc.) */}
             </CardBody>
           </Card>
         </Tab>
+
+        {isSuperOrHigher && (
+          <Tab key="batchmanagement" title="Batch Customizer">
+            <Card>
+              <CardHeader className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Batch Management</h2>
+                  <p className="text-sm text-default-500">Add, edit, or remove dynamic batches used for classes and students</p>
+                </div>
+                <Button color="primary" onPress={() => openBatchModal()}>Add New Batch</Button>
+              </CardHeader>
+              <CardBody>
+                <div className="overflow-x-auto w-full">
+                  <Table aria-label="Batches table" isStriped>
+                    <TableHeader>
+                      <TableColumn>BATCH CODE</TableColumn>
+                      <TableColumn>BATCH NAME</TableColumn>
+                      <TableColumn>DESCRIPTION</TableColumn>
+                      <TableColumn>STATUS</TableColumn>
+                      <TableColumn>CREATED AT</TableColumn>
+                      <TableColumn>ACTIONS</TableColumn>
+                    </TableHeader>
+                    <TableBody isLoading={batchesLoading} emptyContent="No batches found">
+                      {batches.map((b: any) => (
+                        <TableRow key={b.id}>
+                          <TableCell className="font-semibold text-primary">{b.batch_code}</TableCell>
+                          <TableCell>{b.batch_name}</TableCell>
+                          <TableCell>{b.description || "—"}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${b.is_active ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
+                              {b.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </TableCell>
+                          <TableCell>{new Date(b.create_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" onPress={() => openBatchModal(b)}>Edit</Button>
+                              <Button size="sm" color="danger" onPress={() => handleDeleteBatch(b.id)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardBody>
+            </Card>
+          </Tab>
+        )}
+
+        {isSuperOrHigher && (
+          <Tab key="classtypemanagement" title="Class Type Customizer">
+            <Card>
+              <CardHeader className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Class Type Management</h2>
+                  <p className="text-sm text-default-500">Add, edit, or remove dynamic class types (Theory, Revision, Paper, etc.)</p>
+                </div>
+                <Button color="primary" onPress={() => openClassTypeModal()}>Add New Class Type</Button>
+              </CardHeader>
+              <CardBody>
+                <div className="overflow-x-auto w-full">
+                  <Table aria-label="Class types table" isStriped>
+                    <TableHeader>
+                      <TableColumn>TYPE CODE</TableColumn>
+                      <TableColumn>TYPE NAME</TableColumn>
+                      <TableColumn>DESCRIPTION</TableColumn>
+                      <TableColumn>STATUS</TableColumn>
+                      <TableColumn>CREATED AT</TableColumn>
+                      <TableColumn>ACTIONS</TableColumn>
+                    </TableHeader>
+                    <TableBody isLoading={classTypesLoading} emptyContent="No class types found">
+                      {classTypes.map((ct: any) => (
+                        <TableRow key={ct.id}>
+                          <TableCell className="font-semibold text-primary">{ct.type_code}</TableCell>
+                          <TableCell>{ct.type_name}</TableCell>
+                          <TableCell>{ct.description || "—"}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ct.is_active ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
+                              {ct.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </TableCell>
+                          <TableCell>{new Date(ct.create_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" onPress={() => openClassTypeModal(ct)}>Edit</Button>
+                              <Button size="sm" color="danger" onPress={() => handleDeleteClassType(ct.id)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardBody>
+            </Card>
+          </Tab>
+        )}
 
         {isSuperOrHigher && (
           <Tab key="usermanagement" title="User Management">
@@ -480,6 +751,94 @@ function SettingsContent() {
               <ModalFooter>
                 <Button variant="flat" onPress={onClose}>Cancel</Button>
                 <Button onPress={handleSaveUser}>Save</Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Batch Customizer Modal */}
+      <Modal isOpen={batchModalOpen} onOpenChange={setBatchModalOpen}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>{editingBatch ? "Edit Batch" : "Add New Batch"}</ModalHeader>
+              <ModalBody className="space-y-4">
+                <Input
+                  label="Batch Code *"
+                  placeholder="e.g. 2029AL"
+                  value={batchForm.batch_code}
+                  onValueChange={(v) => setBatchForm({ ...batchForm, batch_code: v })}
+                  isRequired
+                />
+                <Input
+                  label="Batch Name *"
+                  placeholder="e.g. 2029 A/L"
+                  value={batchForm.batch_name}
+                  onValueChange={(v) => setBatchForm({ ...batchForm, batch_name: v })}
+                  isRequired
+                />
+                <Input
+                  label="Description"
+                  placeholder="e.g. Batch for 2029 Advanced Level students"
+                  value={batchForm.description}
+                  onValueChange={(v) => setBatchForm({ ...batchForm, description: v })}
+                />
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-sm font-medium">Batch Active</span>
+                  <Switch
+                    isSelected={batchForm.is_active}
+                    onValueChange={(v) => setBatchForm({ ...batchForm, is_active: v })}
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="flat" onPress={onClose}>Cancel</Button>
+                <Button color="primary" onPress={handleSaveBatch}>Save Batch</Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Class Type Customizer Modal */}
+      <Modal isOpen={classTypeModalOpen} onOpenChange={setClassTypeModalOpen}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>{editingClassType ? "Edit Class Type" : "Add New Class Type"}</ModalHeader>
+              <ModalBody className="space-y-4">
+                <Input
+                  label="Type Code *"
+                  placeholder="e.g. workshop"
+                  value={classTypeForm.type_code}
+                  onValueChange={(v) => setClassTypeForm({ ...classTypeForm, type_code: v })}
+                  isRequired
+                />
+                <Input
+                  label="Type Name *"
+                  placeholder="e.g. Workshop"
+                  value={classTypeForm.type_name}
+                  onValueChange={(v) => setClassTypeForm({ ...classTypeForm, type_name: v })}
+                  isRequired
+                />
+                <Input
+                  label="Description"
+                  placeholder="e.g. Special Practical & Workshop Class"
+                  value={classTypeForm.description}
+                  onValueChange={(v) => setClassTypeForm({ ...classTypeForm, description: v })}
+                />
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-sm font-medium">Class Type Active</span>
+                  <Switch
+                    isSelected={classTypeForm.is_active}
+                    onValueChange={(v) => setClassTypeForm({ ...classTypeForm, is_active: v })}
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="flat" onPress={onClose}>Cancel</Button>
+                <Button color="primary" onPress={handleSaveClassType}>Save Class Type</Button>
               </ModalFooter>
             </>
           )}

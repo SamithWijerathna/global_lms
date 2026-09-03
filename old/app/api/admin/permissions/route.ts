@@ -53,6 +53,6 @@ export async function DELETE(req: Request) {
 
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  await db.query("DELETE FROM roles WHERE id = ?", [id]);
+  await db.query("DELETE FROM permission WHERE id = ?", [id]);
   return NextResponse.json({ success: true });
 }

@@ -20,10 +20,7 @@ import {
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
 
-const batches = [
-  { value: "2027OL", label: "2027 OL" },
-  { value: "2028OL", label: "2028 OL" },
-];
+// Dynamic batches loaded from /api/batches
 
 const isValidNIC = (nic: string): boolean => {
   nic = nic.toUpperCase().trim();
@@ -91,6 +88,18 @@ export default function Signup() {
   const [error, setError] = React.useState("");
   const [successMessage, setSuccessMessage] = React.useState("");
   const [isAgreed, setIsAgreed] = React.useState(false);
+  const [batchesList, setBatchesList] = React.useState<Array<{ value: string; label: string }>>([]);
+
+  React.useEffect(() => {
+    fetch("/api/batches")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setBatchesList(data.map((b: any) => ({ value: b.batch_code, label: b.batch_name || b.batch_code })));
+        }
+      })
+      .catch((err) => console.error("Failed to load batches:", err));
+  }, []);
 
   const { isOpen: isTermsOpen, onOpen: onTermsOpen, onOpenChange: onTermsOpenChange } = useDisclosure();
   const { isOpen: isPrivacyOpen, onOpen: onPrivacyOpen, onOpenChange: onPrivacyOpenChange } = useDisclosure();
@@ -413,7 +422,7 @@ export default function Signup() {
                 setForm({ ...form, batch: Array.from(keys)[0] as string })
               }
             >
-              {batches.map((b) => (
+              {batchesList.map((b) => (
                 <SelectItem key={b.value} textValue={b.label}>{b.label}</SelectItem>
               ))}
             </Select>

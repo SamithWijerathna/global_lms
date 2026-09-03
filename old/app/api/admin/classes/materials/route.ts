@@ -111,7 +111,7 @@ export async function GET(req: Request) {
         COUNT(m.material_id) AS material_count
       FROM class_list c
       LEFT JOIN class_material_list m ON c.class_id = m.class_id
-      GROUP BY c.class_id
+      GROUP BY c.class_id, c.class_title, c.class_description, c.class_type, c.class_price, c.class_imageurl
       ORDER BY c.class_id
     `);
     return NextResponse.json(classes);

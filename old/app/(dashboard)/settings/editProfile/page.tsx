@@ -10,6 +10,17 @@ const disabledInputClass = "w-full px-4 py-3 border border-gray-300 dark:border-
 export default function EditProfilePage() {
   const { user, loading } = useAuth();
 
+  const [batches, setBatches] = useState<Array<{ id: number; batch_code: string; batch_name: string }>>([]);
+
+  useEffect(() => {
+    fetch("/api/batches")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setBatches(data);
+      })
+      .catch((err) => console.error("Failed to load batches", err));
+  }, []);
+
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -221,8 +232,11 @@ export default function EditProfilePage() {
             className={inputClass}
           >
             <option value="">Select Batch</option>
-            <option value="2027OL">2027 OL</option>
-            <option value="2028OL">2028 OL</option>
+            {batches.map((b) => (
+              <option key={b.id} value={b.batch_code}>
+                {b.batch_name || b.batch_code}
+              </option>
+            ))}
 
           </select>
         </div>

@@ -1,4 +1,5 @@
 import mysql from "mysql2/promise";
+import { healDatabase } from "./dbHealer";
 
 declare global {
   var mysqlPool: mysql.Pool | undefined;
@@ -36,6 +37,11 @@ export function getDBConnection() {
       queueLimit: 0,
     });
     global.mysqlPoolConfigKey = configKey;
+
+    // Trigger schema healing asynchronously on pool initialization
+    healDatabase(global.mysqlPool).catch(err => {
+      console.error("[DB INITIALIZATION HEAL ERROR]", err);
+    });
   }
   return global.mysqlPool;
 }
