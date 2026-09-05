@@ -80,7 +80,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
       <Link
         key={item.name}
         href={item.href}
-        className={`relative flex items-center h-11 px-4 mx-2 rounded-lg group ${
+        className={`relative flex items-center h-11 px-3 mx-2 rounded-lg group ${
           isActive
             ? "bg-primary/10 text-primary font-medium"
             : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -93,8 +93,8 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
         <span
-          className={`text-sm whitespace-nowrap ${
-            !showMobile && collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-[140px]"
+          className={`text-sm font-medium whitespace-nowrap ${
+            !showMobile && collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 flex-1 min-w-0 truncate"
           } ${firstPaint.current ? "" : "transition-all duration-300"}`}
         >
           {item.name}
@@ -107,19 +107,19 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
       </Link>
     );
   };
-  const renderSectionDivider = (label: string) => (
-    <div className="my-4 px-4">
-      <div className="relative flex items-center">
-        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-        {(!collapsed || showMobile) && (
-          <span className="px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-white dark:bg-gray-900">
-            {label}
-          </span>
-        )}
-        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+  const renderSectionDivider = (label: string) => {
+    if (!showMobile && collapsed) {
+      return <div className="my-3 mx-3 border-t border-gray-200 dark:border-gray-800" />;
+    }
+    return (
+      <div className="mt-5 mb-2 px-4 flex items-center gap-2">
+        <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">
+          {label}
+        </span>
+        <div className="flex-1 h-px bg-gray-200/80 dark:bg-gray-800" />
       </div>
-    </div>
-  );
+    );
+  };
   return (
     <>
       {/* Mobile overlay */}
@@ -129,7 +129,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
       />
       <aside
         className={`h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col ${
-          showMobile ? "w-56" : collapsed ? "w-16" : "w-56"
+          showMobile ? "w-64" : collapsed ? "w-16" : "w-64"
         } ${firstPaint.current ? "" : "transition-all duration-300"} 
         ${showMobile ? "fixed z-50 left-0 top-0" : "hidden md:flex md:static"}`}
         style={showMobile ? { height: "100vh" } : {}}
@@ -140,11 +140,11 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
             !showMobile && collapsed ? "justify-center" : "px-4"
           }`}
         >
-          <div className="flex items-center gap-2 overflow-hidden w-full">
+          <div className="flex items-center gap-2.5 overflow-hidden w-full">
             <img src="/assets/logo.png" alt="LASHINIGEO LMS" className="w-8 h-8 flex-shrink-0 object-contain filter dark:brightness-0 dark:invert transition-all" />
             <span
               className={`text-base font-semibold text-gray-900 dark:text-white whitespace-nowrap tracking-tight flex-1 ${
-                !showMobile && collapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[170px]"
+                !showMobile && collapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto"
               } ${firstPaint.current ? "" : "transition-all duration-300"}`}
             >
               LASHINIGEO LMS
@@ -174,7 +174,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
             onClick={() => {
               if (showMobile && setMobileOpen) setMobileOpen(false);
             }}
-            className={`relative flex items-center h-11 px-4 mx-2 rounded-lg group ${
+            className={`relative flex items-center h-11 px-3 mx-2 rounded-lg group ${
               pathname === "/admin/settings"
                 ? "bg-primary/10 text-primary font-medium"
                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -184,8 +184,8 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
           >
             <Users className="w-5 h-5 flex-shrink-0" />
             <span
-              className={`text-sm whitespace-nowrap ${
-                !showMobile && collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-[140px]"
+              className={`text-sm font-medium whitespace-nowrap ${
+                !showMobile && collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 flex-1 min-w-0 truncate"
               } ${firstPaint.current ? "" : "transition-all duration-300"}`}
             >
               User Manager
@@ -196,14 +196,14 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
             onClick={() => {
               if (showMobile && setMobileOpen) setMobileOpen(false);
             }}
-            className={`relative flex items-center h-11 px-4 mx-2 rounded-lg group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 ${!showMobile && collapsed ? "justify-center" : "gap-3"} ${
+            className={`relative flex items-center h-11 px-3 mx-2 rounded-lg group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 ${!showMobile && collapsed ? "justify-center" : "gap-3"} ${
               firstPaint.current ? "" : "transition-all duration-300"
             }`}
           >
             <Settings className="w-5 h-5 flex-shrink-0" />
             <span
-              className={`text-sm whitespace-nowrap ${
-                !showMobile && collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-[140px]"
+              className={`text-sm font-medium whitespace-nowrap ${
+                !showMobile && collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 flex-1 min-w-0 truncate"
               } ${firstPaint.current ? "" : "transition-all duration-300"}`}
             >
               Settings

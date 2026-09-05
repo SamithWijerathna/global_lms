@@ -66,7 +66,7 @@ export function Sidebar() {
       <Link
         key={item.name}
         href={item.href}
-        className={`relative flex items-center h-11 px-4 mx-2 rounded-lg group ${
+        className={`relative flex items-center h-11 px-3 mx-2 rounded-lg group ${
           isActive
             ? "bg-primary/10 text-primary font-medium"
             : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -76,14 +76,14 @@ export function Sidebar() {
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
         <span
-          className={`text-sm whitespace-nowrap ${
-            collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-[140px]"
+          className={`text-sm font-medium whitespace-nowrap ${
+            collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 flex-1 min-w-0 truncate"
           } ${firstPaint.current ? "" : "transition-all duration-300"}`}
         >
           {item.name}
         </span>
         {collapsed && (
-          <div className="absolute left-14 px-2 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+          <div className="absolute left-14 px-2 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
             {item.name}
           </div>
         )}
@@ -91,30 +91,25 @@ export function Sidebar() {
     );
   };
 
-  const renderSectionDivider = (label: string) => (
-    <div className="my-4 px-4">
-      <div className="relative flex items-center">
-        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-        {!collapsed && (
-          <span className="px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-white dark:bg-gray-900">
-            {label}
-          </span>
-        )}
-        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+  const renderSectionDivider = (label: string) => {
+    if (collapsed) {
+      return <div className="my-3 mx-3 border-t border-gray-200 dark:border-gray-800" />;
+    }
+    return (
+      <div className="mt-5 mb-2 px-4 flex items-center gap-2">
+        <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">
+          {label}
+        </span>
+        <div className="flex-1 h-px bg-gray-200/80 dark:bg-gray-800" />
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <aside
       className={`h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col ${
-        collapsed ? "w-16" : "w-56"
+        collapsed ? "w-16" : "w-64"
       } ${firstPaint.current ? "" : "transition-all duration-300"} hidden sm:flex`}
-      /*
-        hidden: always hidden by default
-        sm:flex: visible as flex on small screens (>=640px) and up
-        On mobile (<640px), sidebar will be hidden
-      */
     >
       {/* Brand */}
       <div
@@ -122,11 +117,11 @@ export function Sidebar() {
           collapsed ? "justify-center" : "px-4"
         }`}
       >
-        <div className="flex items-center gap-2 overflow-hidden">
+        <div className="flex items-center gap-2.5 overflow-hidden w-full">
           <img src="/assets/logo.png" alt="LASHINIGEO LMS" className="w-8 h-8 flex-shrink-0 object-contain filter dark:brightness-0 dark:invert transition-all" />
           <span
             className={`text-base font-semibold text-gray-900 dark:text-white whitespace-nowrap tracking-tight ${
-              collapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[170px]"
+              collapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto"
             } ${firstPaint.current ? "" : "transition-all duration-300"}`}
           >
             LASHINIGEO LMS
