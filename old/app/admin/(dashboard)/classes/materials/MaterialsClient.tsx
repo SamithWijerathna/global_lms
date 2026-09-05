@@ -357,135 +357,161 @@ export default function MaterialsPage() {
               <div className="text-center py-12">
                 <p className="text-default-500 text-lg">No materials found in this section/search.</p>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {displayedMaterials.map((mat: any, index: number) => {
-                  const originalIndex = materials.findIndex(
-                    (m: any) => m.material_id === mat.material_id
-                  );
-                  return (
-                    <Card key={mat.material_id} className="shadow-lg relative overflow-hidden">
-                      <div
-                        className="relative h-[200px] cursor-pointer"
-                        onClick={() => handlePreview(mat)}
-                      >
-                        {mat.material_imageurl ? (
-                          <Image
-                            removeWrapper
-                            alt={mat.material_title}
-                            className="w-full h-full object-cover rounded-t-lg"
-                            src={mat.material_imageurl}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                            <span className="text-gray-600 text-lg">No Cover</span>
-                          </div>
-                        )}
+            ) : (() => {
+              const displayedBySection = displayedMaterials.reduce((acc, m) => {
+                const sec = m.section_name || "General";
+                if (!acc[sec]) acc[sec] = [];
+                acc[sec].push(m);
+                return acc;
+              }, {} as Record<string, any[]>);
 
-                        {/* Top Left Reorder Controls */}
-                        <div className="absolute top-2 left-2 z-20 flex gap-1">
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="bordered"
-                            className="border-white/30 bg-black/50 text-white hover:bg-black/70"
-                            isDisabled={originalIndex === 0 || reordering}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleMoveMaterial(originalIndex, "up");
-                            }}
-                            title="Move material up"
-                          >
-                            <ArrowUp className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="bordered"
-                            className="border-white/30 bg-black/50 text-white hover:bg-black/70"
-                            isDisabled={originalIndex === materials.length - 1 || reordering}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleMoveMaterial(originalIndex, "down");
-                            }}
-                            title="Move material down"
-                          >
-                            <ArrowDown className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-
-                        <div className="absolute top-2 right-2 z-10">
-                          <Chip
-                            color={
-                              mat.material_type === "video"
-                                ? "success"
-                                : mat.material_type === "pdf"
-                                ? "warning"
-                                : "secondary"
-                            }
-                            size="sm"
-                          >
-                            {mat.material_type.toUpperCase()}
-                          </Chip>
-                        </div>
-
-                        {(mat.material_video_url || mat.material_pdf_url) && (
-                          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center rounded-t-lg">
-                            <Button color="white" variant="shadow">
-                              Preview
-                            </Button>
-                          </div>
-                        )}
+              return (
+                <div className="space-y-10">
+                  {Object.entries(displayedBySection).map(([sectionName, secMats]) => (
+                    <div key={sectionName}>
+                      {/* Section Header / Text Separator */}
+                      <div className="flex items-center gap-3 mb-6 pb-2 border-b border-default-200 dark:border-default-100">
+                        <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-sm" />
+                        <h3 className="text-xl font-bold text-foreground capitalize tracking-wide">
+                          {sectionName}
+                        </h3>
+                        <Chip color="secondary" variant="flat" size="sm" className="font-semibold">
+                          {secMats.length} item{secMats.length !== 1 ? "s" : ""}
+                        </Chip>
                       </div>
 
-                      <CardBody>
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <h3 className="text-xl font-semibold">{mat.material_title}</h3>
-                        </div>
-                        <Chip size="sm" variant="flat" color="secondary" className="mb-2 font-medium">
-                          {mat.section_name || "General"}
-                        </Chip>
-                        <p className="text-default-600 text-sm">
-                          {mat.material_description || "No description"}
-                        </p>
-                      </CardBody>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {secMats.map((mat: any) => {
+                          const originalIndex = materials.findIndex(
+                            (m: any) => m.material_id === mat.material_id
+                          );
+                          return (
+                            <Card key={mat.material_id} className="shadow-lg relative overflow-hidden">
+                              <div
+                                className="relative h-[200px] cursor-pointer"
+                                onClick={() => handlePreview(mat)}
+                              >
+                                {mat.material_imageurl ? (
+                                  <Image
+                                    removeWrapper
+                                    alt={mat.material_title}
+                                    className="w-full h-full object-cover rounded-t-lg"
+                                    src={mat.material_imageurl}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                                    <span className="text-gray-600 text-lg">No Cover</span>
+                                  </div>
+                                )}
 
-                      <CardFooter className="justify-end">
-                        <Dropdown>
-                          <DropdownTrigger>
-                            <Button isIconOnly size="sm" variant="light">
-                              <VerticalDotsIcon className="w-5 h-5" />
-                            </Button>
-                          </DropdownTrigger>
-                          <DropdownMenu aria-label="Material actions" variant="faded">
-                            <DropdownItem
-                              key="edit"
-                              description="Update material"
-                              startContent={<EditDocumentIcon className="w-5 h-5" />}
-                              onPress={() =>
-                                router.push(`/admin/classes/materials/edit/${mat.material_id}`)
-                              }
-                            >
-                              Edit
-                            </DropdownItem>
-                            <DropdownItem
-                              key="delete"
-                              className="text-danger"
-                              color="danger"
-                              description="Remove permanently"
-                              startContent={<DeleteDocumentIcon className="w-5 h-5 text-danger" />}
-                              onPress={() => handleDelete(mat.material_id)}
-                            >
-                              Delete
-                            </DropdownItem>
-                          </DropdownMenu>
-                        </Dropdown>
-                      </CardFooter>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                                {/* Top Left Reorder Controls */}
+                                <div className="absolute top-2 left-2 z-20 flex gap-1">
+                                  <Button
+                                    isIconOnly
+                                    size="sm"
+                                    variant="bordered"
+                                    className="border-white/30 bg-black/50 text-white hover:bg-black/70"
+                                    isDisabled={originalIndex === 0 || reordering}
+                                    onPress={(e) => {
+                                      e.stopPropagation();
+                                      handleMoveMaterial(originalIndex, "up");
+                                    }}
+                                    title="Move material up"
+                                  >
+                                    <ArrowUp className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <Button
+                                    isIconOnly
+                                    size="sm"
+                                    variant="bordered"
+                                    className="border-white/30 bg-black/50 text-white hover:bg-black/70"
+                                    isDisabled={originalIndex === materials.length - 1 || reordering}
+                                    onPress={(e) => {
+                                      e.stopPropagation();
+                                      handleMoveMaterial(originalIndex, "down");
+                                    }}
+                                    title="Move material down"
+                                  >
+                                    <ArrowDown className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+
+                                <div className="absolute top-2 right-2 z-10">
+                                  <Chip
+                                    color={
+                                      mat.material_type === "video"
+                                        ? "success"
+                                        : mat.material_type === "pdf"
+                                        ? "warning"
+                                        : "secondary"
+                                    }
+                                    size="sm"
+                                  >
+                                    {mat.material_type.toUpperCase()}
+                                  </Chip>
+                                </div>
+
+                                {(mat.material_video_url || mat.material_pdf_url) && (
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center rounded-t-lg">
+                                    <Button color="white" variant="shadow">
+                                      Preview
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+
+                              <CardBody>
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <h3 className="text-xl font-semibold">{mat.material_title}</h3>
+                                </div>
+                                <Chip size="sm" variant="flat" color="secondary" className="mb-2 font-medium">
+                                  {mat.section_name || "General"}
+                                </Chip>
+                                <p className="text-default-600 text-sm">
+                                  {mat.material_description || "No description"}
+                                </p>
+                              </CardBody>
+
+                              <CardFooter className="justify-end">
+                                <Dropdown>
+                                  <DropdownTrigger>
+                                    <Button isIconOnly size="sm" variant="light">
+                                      <VerticalDotsIcon className="w-5 h-5" />
+                                    </Button>
+                                  </DropdownTrigger>
+                                  <DropdownMenu aria-label="Material actions" variant="faded">
+                                    <DropdownItem
+                                      key="edit"
+                                      description="Update material"
+                                      startContent={<EditDocumentIcon className="w-5 h-5" />}
+                                      onPress={() =>
+                                        router.push(`/admin/classes/materials/edit/${mat.material_id}`)
+                                      }
+                                    >
+                                      Edit
+                                    </DropdownItem>
+                                    <DropdownItem
+                                      key="delete"
+                                      className="text-danger"
+                                      color="danger"
+                                      description="Remove permanently"
+                                      startContent={<DeleteDocumentIcon className="w-5 h-5 text-danger" />}
+                                      onPress={() => handleDelete(mat.material_id)}
+                                    >
+                                      Delete
+                                    </DropdownItem>
+                                  </DropdownMenu>
+                                </Dropdown>
+                              </CardFooter>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}

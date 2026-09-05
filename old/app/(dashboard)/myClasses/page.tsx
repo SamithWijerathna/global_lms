@@ -768,90 +768,116 @@ export default function MyLessonPage() {
                 <div className="text-center py-12">
                   <p className="text-default-500 text-lg">No materials found in this section/search.</p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {displayedMaterials.map((material) => {
-                    const isExpired =
-                      material.expire_hours &&
-                      material.expire_hours !== "unlimited" &&
-                      material.create_at &&
-                      Date.now() >
-                        new Date(material.create_at).getTime() +
-                          material.expire_hours * 3600000;
+              ) : (() => {
+                const displayedBySection = displayedMaterials.reduce((acc, m) => {
+                  const sec = m.section_name || "General";
+                  if (!acc[sec]) acc[sec] = [];
+                  acc[sec].push(m);
+                  return acc;
+                }, {} as Record<string, Material[]>);
 
-                    return (
-                      <Card
-                        key={material.material_id}
-                        isPressable={!isExpired}
-                        onPress={
-                          isExpired ? undefined : () => setSelectedMaterial(material)
-                        }
-                        className={`overflow-hidden shadow-lg transition-all ${
-                          isExpired
-                            ? "opacity-60 grayscale"
-                            : "hover:shadow-2xl hover:scale-105"
-                        }`}
-                      >
-                        {material.material_imageurl && (
-                          <Image
-                            removeWrapper
-                            src={material.material_imageurl}
-                            alt={material.material_title}
-                            className="h-48 w-full object-cover"
-                          />
-                        )}
-                        <div className="p-6 relative">
-                          {isExpired && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 rounded-large">
-                              <Chip color="danger" size="lg" variant="shadow">
-                                Expired
-                              </Chip>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 mb-3">
-                            <Chip color="primary" variant="flat" size="sm">
-                              {material.material_type?.toUpperCase()}
-                            </Chip>
-                            <Chip color="secondary" variant="flat" size="sm" className="capitalize font-medium">
-                              {material.section_name || "General"}
-                            </Chip>
-                          </div>
-                          <h3 className="text-xl font-semibold mb-2">
-                            {material.material_title}
+                return (
+                  <div className="space-y-10">
+                    {Object.entries(displayedBySection).map(([sectionName, secMats]) => (
+                      <div key={sectionName}>
+                        {/* Section Header / Text Separator */}
+                        <div className="flex items-center gap-3 mb-6 pb-2 border-b border-default-200 dark:border-default-100">
+                          <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-sm" />
+                          <h3 className="text-xl font-bold text-foreground capitalize tracking-wide">
+                            {sectionName}
                           </h3>
-                          <p className="text-default-600 text-sm mb-4">
-                            {material.material_description}
-                          </p>
-                          <Button
-                            fullWidth
-                            color={
-                              material.material_type === "video"
-                                ? "danger"
-                                : material.material_type === "pdf"
-                                ? "success"
-                                : "primary"
-                            }
-                            isDisabled={isExpired}
-                            onPress={
-                              isExpired
-                                ? undefined
-                                : () => setSelectedMaterial(material)
-                            }
-                          >
-                            {isExpired
-                              ? "Expired"
-                              : material.material_type === "video"
-                              ? "Watch Video"
-                              : material.material_type === "pdf"
-                              ? "View PDF"
-                              : "Open Link"}
-                          </Button>
+                          <Chip color="secondary" variant="flat" size="sm" className="font-semibold">
+                            {secMats.length} item{secMats.length !== 1 ? "s" : ""}
+                          </Chip>
                         </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                          {secMats.map((material) => {
+                            const isExpired =
+                              material.expire_hours &&
+                              material.expire_hours !== "unlimited" &&
+                              material.create_at &&
+                              Date.now() >
+                                new Date(material.create_at).getTime() +
+                                  material.expire_hours * 3600000;
+
+                            return (
+                              <Card
+                                key={material.material_id}
+                                isPressable={!isExpired}
+                                onPress={
+                                  isExpired ? undefined : () => setSelectedMaterial(material)
+                                }
+                                className={`overflow-hidden shadow-lg transition-all ${
+                                  isExpired
+                                    ? "opacity-60 grayscale"
+                                    : "hover:shadow-2xl hover:scale-[1.02]"
+                                }`}
+                              >
+                                {material.material_imageurl && (
+                                  <Image
+                                    removeWrapper
+                                    src={material.material_imageurl}
+                                    alt={material.material_title}
+                                    className="h-48 w-full object-cover"
+                                  />
+                                )}
+                                <div className="p-6 relative">
+                                  {isExpired && (
+                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 rounded-large">
+                                      <Chip color="danger" size="lg" variant="shadow">
+                                        Expired
+                                      </Chip>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Chip color="primary" variant="flat" size="sm">
+                                      {material.material_type?.toUpperCase()}
+                                    </Chip>
+                                    <Chip color="secondary" variant="flat" size="sm" className="capitalize font-medium">
+                                      {material.section_name || "General"}
+                                    </Chip>
+                                  </div>
+                                  <h3 className="text-xl font-semibold mb-2">
+                                    {material.material_title}
+                                  </h3>
+                                  <p className="text-default-600 text-sm mb-4">
+                                    {material.material_description}
+                                  </p>
+                                  <Button
+                                    fullWidth
+                                    color={
+                                      material.material_type === "video"
+                                        ? "danger"
+                                        : material.material_type === "pdf"
+                                        ? "success"
+                                        : "primary"
+                                    }
+                                    isDisabled={isExpired}
+                                    onPress={
+                                      isExpired
+                                        ? undefined
+                                        : () => setSelectedMaterial(material)
+                                    }
+                                  >
+                                    {isExpired
+                                      ? "Expired"
+                                      : material.material_type === "video"
+                                      ? "Watch Video"
+                                      : material.material_type === "pdf"
+                                      ? "View PDF"
+                                      : "Open Link"}
+                                  </Button>
+                                </div>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}

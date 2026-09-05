@@ -721,94 +721,125 @@ export default function QuickAccessPage() {
         </div>
       ) : (
         <div>
-          {Object.entries(groupedMaterials).map(([classTitle, materials]) => (
-            <div key={classTitle}>
-              <h2 className="text-2xl font-bold mt-12 mb-6 flex items-center gap-4">
-                {classTitle}
-                <Chip color="secondary" variant="flat">
-                  {materials.length} material{materials.length !== 1 ? "s" : ""}
-                </Chip>
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {materials.map((material) => {
-                  const isExpired =
-                    material.expire_hours &&
-                    material.expire_hours !== "unlimited" &&
-                    material.create_at &&
-                    Date.now() >
-                      new Date(material.create_at).getTime() +
-                        material.expire_hours * 3600000;
+          {Object.entries(groupedMaterials).map(([classTitle, classMats]) => {
+            // Group class materials by custom section
+            const groupedBySection = classMats.reduce((secAcc, mat) => {
+              const secKey = mat.section_name || "General";
+              if (!secAcc[secKey]) secAcc[secKey] = [];
+              secAcc[secKey].push(mat);
+              return secAcc;
+            }, {} as Record<string, Material[]>);
 
-                  return (
-                    <Card
-                      key={material.material_id}
-                      className={`relative overflow-hidden shadow-lg transition-all ${
-                        isExpired
-                          ? "opacity-60 grayscale"
-                          : "hover:shadow-2xl"
-                      }`}
-                    >
-                      {material.material_imageurl && (
-                        <Image
-                          removeWrapper
-                          src={material.material_imageurl}
-                          alt={material.material_title}
-                          className="h-48 w-full object-cover rounded-t-large"
-                        />
-                      )}
-                      {isExpired && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-30 rounded-large">
-                          <Chip color="danger" size="lg" variant="shadow">
-                            Expired
-                          </Chip>
-                        </div>
-                      )}
-                      <div className="p-6">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Chip color="primary" variant="flat" size="sm">
-                            {material.material_type?.toUpperCase()}
-                          </Chip>
-                          <Chip color="secondary" variant="flat" size="sm" className="capitalize font-medium">
-                            {material.section_name || "General"}
-                          </Chip>
-                        </div>
-                        <h3 className="text-xl font-semibold mb-2">
-                          {material.material_title}
-                        </h3>
-                        <p className="text-default-600 text-sm mb-4">
-                          {material.material_description}
-                        </p>
-                        <Button
-                          fullWidth
-                          color={
-                            material.material_type === "video"
-                              ? "danger"
-                              : material.material_type === "pdf"
-                              ? "success"
-                              : "primary"
-                          }
-                          isDisabled={!!isExpired}
-                          onPress={
-                            isExpired
-                              ? undefined
-                              : () => setSelectedMaterial(material)
-                          }
-                        >
-                          {isExpired
-                            ? "Expired"
-                            : material.material_type === "video"
-                            ? "Watch Video"
-                            : material.material_type === "pdf"
-                            ? "View PDF"
-                            : "Open Link"}
-                        </Button>
-                      </div>
-                    </Card>
-                  );
-                })}
+            return (
+              <div key={classTitle} className="mb-14">
+                {/* Class Header */}
+                <div className="bg-content1 dark:bg-zinc-900/80 p-5 rounded-2xl border border-default-200 shadow-md mb-6 flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                    <span className="w-3 h-8 bg-primary rounded-full inline-block" />
+                    {classTitle}
+                  </h2>
+                  <Chip color="primary" variant="solid" size="md" className="font-semibold">
+                    {classMats.length} material{classMats.length !== 1 ? "s" : ""}
+                  </Chip>
+                </div>
+
+                {/* Sections inside Class */}
+                {Object.entries(groupedBySection).map(([sectionName, secMaterials]) => (
+                  <div key={sectionName} className="mb-10 pl-2 md:pl-4">
+                    {/* Section Header / Text Separator */}
+                    <div className="flex items-center gap-3 mb-6 pb-2 border-b border-default-200 dark:border-default-100">
+                      <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-sm" />
+                      <h3 className="text-xl font-bold text-foreground capitalize tracking-wide">
+                        {sectionName}
+                      </h3>
+                      <Chip color="secondary" variant="flat" size="sm" className="font-semibold">
+                        {secMaterials.length} item{secMaterials.length !== 1 ? "s" : ""}
+                      </Chip>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                      {secMaterials.map((material) => {
+                        const isExpired =
+                          material.expire_hours &&
+                          material.expire_hours !== "unlimited" &&
+                          material.create_at &&
+                          Date.now() >
+                            new Date(material.create_at).getTime() +
+                              material.expire_hours * 3600000;
+
+                        return (
+                          <Card
+                            key={material.material_id}
+                            className={`relative overflow-hidden shadow-lg transition-all ${
+                              isExpired
+                                ? "opacity-60 grayscale"
+                                : "hover:shadow-2xl hover:scale-[1.02]"
+                            }`}
+                          >
+                            {material.material_imageurl && (
+                              <Image
+                                removeWrapper
+                                src={material.material_imageurl}
+                                alt={material.material_title}
+                                className="h-48 w-full object-cover rounded-t-large"
+                              />
+                            )}
+                            {isExpired && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-30 rounded-large">
+                                <Chip color="danger" size="lg" variant="shadow">
+                                  Expired
+                                </Chip>
+                              </div>
+                            )}
+                            <div className="p-6">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Chip color="primary" variant="flat" size="sm">
+                                  {material.material_type?.toUpperCase()}
+                                </Chip>
+                                <Chip color="secondary" variant="flat" size="sm" className="capitalize font-medium">
+                                  {material.section_name || "General"}
+                                </Chip>
+                              </div>
+                              <h3 className="text-xl font-semibold mb-2">
+                                {material.material_title}
+                              </h3>
+                              <p className="text-default-600 text-sm mb-4">
+                                {material.material_description}
+                              </p>
+                              <Button
+                                fullWidth
+                                color={
+                                  material.material_type === "video"
+                                    ? "danger"
+                                    : material.material_type === "pdf"
+                                    ? "success"
+                                    : "primary"
+                                }
+                                isDisabled={!!isExpired}
+                                onPress={
+                                  isExpired
+                                    ? undefined
+                                    : () => setSelectedMaterial(material)
+                                }
+                              >
+                                {isExpired
+                                  ? "Expired"
+                                  : material.material_type === "video"
+                                  ? "Watch Video"
+                                  : material.material_type === "pdf"
+                                  ? "View PDF"
+                                  : "Open Link"}
+                              </Button>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
