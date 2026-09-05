@@ -43,6 +43,8 @@ type Material = {
   material_video_url?: string;
   material_pdf_url?: string;
   material_link?: string;
+  section_name?: string;
+  display_order?: number;
   create_at?: string;
   pdf_downloadable?: boolean;
   view_limit_enabled?: boolean;
@@ -731,9 +733,14 @@ export default function QuickAccessPage() {
                         </div>
                       )}
                       <div className="p-6">
-                        <Chip color="primary" variant="flat" className="mb-3">
-                          {material.material_type?.toUpperCase()}
-                        </Chip>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Chip color="primary" variant="flat" size="sm">
+                            {material.material_type?.toUpperCase()}
+                          </Chip>
+                          <Chip color="secondary" variant="flat" size="sm" className="capitalize font-medium">
+                            {material.section_name || "General"}
+                          </Chip>
+                        </div>
                         <h3 className="text-xl font-semibold mb-2">
                           {material.material_title}
                         </h3>

@@ -16,7 +16,9 @@ import {
   Banknote,
   Building2,
   AlertCircle,
+  Search,
 } from "lucide-react";
+import { Input } from "@heroui/input";
 import { useAuth } from "@/src/lib/useAuth";
 import ProtectedYouTubePlayer, { getYouTubeId } from "@/components/ProtectedYouTubePlayer";
 
@@ -43,6 +45,8 @@ type Material = {
   material_video_url?: string;
   material_pdf_url?: string;
   material_link?: string;
+  section_name?: string;
+  display_order?: number;
   create_at?: string;
   pdf_downloadable?: boolean;
   view_limit_enabled?: boolean;
@@ -403,6 +407,8 @@ export default function MyLessonPage() {
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(
     null
   );
+  const [selectedSection, setSelectedSection] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentClass, setPaymentClass] = useState<ClassItem | null>(null);
   const [bankChoice, setBankChoice] = useState<"commercial" | "hnb">(
@@ -552,6 +558,8 @@ export default function MyLessonPage() {
     try {
       setLoadingMaterials(true);
       setSelectedClass(cls);
+      setSelectedSection("ALL");
+      setSearchQuery("");
       const fd = new FormData();
       fd.append("action", "class_materials");
       fd.append("class_id", cls.class_id);
@@ -663,85 +671,160 @@ export default function MyLessonPage() {
           <p className="text-center text-default-500 py-12">Loading materials...</p>
         ) : materials.length === 0 ? (
           <p className="text-center text-default-500 py-12">No materials available.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-            {materials.map((material) => {
-              const isExpired =
-                material.expire_hours &&
-                material.expire_hours !== "unlimited" &&
-                material.create_at &&
-                Date.now() >
-                  new Date(material.create_at).getTime() +
-                    material.expire_hours * 3600000;
+        ) : (() => {
+          const sections = Array.from(
+            new Set(materials.map((m) => m.section_name || "General"))
+          );
+          const sectionFiltered =
+            selectedSection === "ALL"
+              ? materials
+              : materials.filter(
+                  (m) => (m.section_name || "General") === selectedSection
+                );
+          const displayedMaterials = sectionFiltered.filter(
+            (m) =>
+              !searchQuery ||
+              m.material_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              m.material_description?.toLowerCase().includes(searchQuery.toLowerCase())
+          );
 
-              return (
-                <Card
-                  key={material.material_id}
-                  isPressable={!isExpired}
-                  onPress={
-                    isExpired ? undefined : () => setSelectedMaterial(material)
-                  }
-                  className={`overflow-hidden shadow-lg transition-all ${
-                    isExpired
-                      ? "opacity-60 grayscale"
-                      : "hover:shadow-2xl hover:scale-105"
-                  }`}
-                >
-                  {material.material_imageurl && (
-                    <Image
-                      removeWrapper
-                      src={material.material_imageurl}
-                      alt={material.material_title}
-                      className="h-48 w-full object-cover"
-                    />
-                  )}
-                  <div className="p-6 relative">
-                    {isExpired && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 rounded-large">
-                        <Chip color="danger" size="lg" variant="shadow">
-                          Expired
-                        </Chip>
-                      </div>
-                    )}
-                    <Chip color="primary" variant="flat" className="mb-3">
-                      {material.material_type?.toUpperCase()}
-                    </Chip>
-                    <h3 className="text-xl font-semibold mb-2">
-                      {material.material_title}
-                    </h3>
-                    <p className="text-default-600 text-sm mb-4">
-                      {material.material_description}
-                    </p>
-                    <Button
-                      fullWidth
-                      color={
-                        material.material_type === "video"
-                          ? "danger"
-                          : material.material_type === "pdf"
-                          ? "success"
-                          : "primary"
-                      }
-                      isDisabled={isExpired}
-                      onPress={
-                        isExpired
-                          ? undefined
-                          : () => setSelectedMaterial(material)
-                      }
-                    >
-                      {isExpired
-                        ? "Expired"
-                        : material.material_type === "video"
-                        ? "Watch Video"
-                        : material.material_type === "pdf"
-                        ? "View PDF"
-                        : "Open Link"}
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+          return (
+            <div className="mt-8">
+              {/* Section Filters & Search Bar */}
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-8">
+                {/* Toggleable Custom Section Cards / Chips */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+                  <Button
+                    size="sm"
+                    variant={selectedSection === "ALL" ? "solid" : "flat"}
+                    color={selectedSection === "ALL" ? "primary" : "default"}
+                    onPress={() => setSelectedSection("ALL")}
+                    className="font-semibold"
+                  >
+                    All Sections ({materials.length})
+                  </Button>
+                  {sections.map((secName) => {
+                    const count = materials.filter(
+                      (m) => (m.section_name || "General") === secName
+                    ).length;
+                    return (
+                      <Button
+                        key={secName}
+                        size="sm"
+                        variant={selectedSection === secName ? "solid" : "flat"}
+                        color={selectedSection === secName ? "primary" : "default"}
+                        onPress={() => setSelectedSection(secName)}
+                        className="font-semibold capitalize"
+                      >
+                        {secName} ({count})
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                {/* Search Bar */}
+                <div className="w-full md:w-72">
+                  <Input
+                    placeholder="Search materials..."
+                    size="sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    startContent={<Search className="w-4 h-4 text-default-400" />}
+                  />
+                </div>
+              </div>
+
+              {displayedMaterials.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-default-500 text-lg">No materials found in this section/search.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {displayedMaterials.map((material) => {
+                    const isExpired =
+                      material.expire_hours &&
+                      material.expire_hours !== "unlimited" &&
+                      material.create_at &&
+                      Date.now() >
+                        new Date(material.create_at).getTime() +
+                          material.expire_hours * 3600000;
+
+                    return (
+                      <Card
+                        key={material.material_id}
+                        isPressable={!isExpired}
+                        onPress={
+                          isExpired ? undefined : () => setSelectedMaterial(material)
+                        }
+                        className={`overflow-hidden shadow-lg transition-all ${
+                          isExpired
+                            ? "opacity-60 grayscale"
+                            : "hover:shadow-2xl hover:scale-105"
+                        }`}
+                      >
+                        {material.material_imageurl && (
+                          <Image
+                            removeWrapper
+                            src={material.material_imageurl}
+                            alt={material.material_title}
+                            className="h-48 w-full object-cover"
+                          />
+                        )}
+                        <div className="p-6 relative">
+                          {isExpired && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 rounded-large">
+                              <Chip color="danger" size="lg" variant="shadow">
+                                Expired
+                              </Chip>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 mb-3">
+                            <Chip color="primary" variant="flat" size="sm">
+                              {material.material_type?.toUpperCase()}
+                            </Chip>
+                            <Chip color="secondary" variant="flat" size="sm" className="capitalize font-medium">
+                              {material.section_name || "General"}
+                            </Chip>
+                          </div>
+                          <h3 className="text-xl font-semibold mb-2">
+                            {material.material_title}
+                          </h3>
+                          <p className="text-default-600 text-sm mb-4">
+                            {material.material_description}
+                          </p>
+                          <Button
+                            fullWidth
+                            color={
+                              material.material_type === "video"
+                                ? "danger"
+                                : material.material_type === "pdf"
+                                ? "success"
+                                : "primary"
+                            }
+                            isDisabled={isExpired}
+                            onPress={
+                              isExpired
+                                ? undefined
+                                : () => setSelectedMaterial(material)
+                            }
+                          >
+                            {isExpired
+                              ? "Expired"
+                              : material.material_type === "video"
+                              ? "Watch Video"
+                              : material.material_type === "pdf"
+                              ? "View PDF"
+                              : "Open Link"}
+                          </Button>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   }

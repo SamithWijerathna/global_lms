@@ -99,7 +99,7 @@ export async function GET(req: Request) {
 
     if (classId) {
       const [materials] = await db.query(
-        "SELECT * FROM class_material_list WHERE class_id = ? ORDER BY material_id DESC",
+        "SELECT * FROM class_material_list WHERE class_id = ? ORDER BY display_order ASC, material_id DESC",
         [classId]
       );
       return NextResponse.json(materials);
@@ -273,6 +273,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Material ID is required" }, { status: 400 });
     }
 
+    const section_name = (formData.get("section_name") as string)?.trim() || "General";
+    const display_order = parseInt((formData.get("display_order") as string) || "0") || 0;
+
     // Handle video-specific fields
     let expire_hours: string | null = null;
     let view_count_enabled = 0;
@@ -308,8 +311,8 @@ export async function POST(req: Request) {
           `INSERT INTO class_material_list 
            (material_id, material_title, material_description, material_type, material_link,
             class_id, material_imageurl, material_video_url, material_pdf_url, downloadable,
-            expire_hours, view_count_enabled, view_limit)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            expire_hours, view_count_enabled, view_limit, section_name, display_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             material_id, 
             material_title.trim(), 
@@ -323,7 +326,9 @@ export async function POST(req: Request) {
             downloadable ? 1 : 0,
             expire_hours, 
             view_count_enabled, 
-            view_limit
+            view_limit,
+            section_name,
+            display_order
           ]
         );
       }
@@ -385,6 +390,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const section_name = (formData.get("section_name") as string)?.trim() || "General";
+    const display_order = parseInt((formData.get("display_order") as string) || "0") || 0;
+
     try {
       // Delete old entries
       await db.query("DELETE FROM class_material_list WHERE material_id = ?", [material_id]);
@@ -395,12 +403,12 @@ export async function POST(req: Request) {
           `INSERT INTO class_material_list 
            (material_id, material_title, material_description, material_type, material_link,
             class_id, material_imageurl, material_video_url, material_pdf_url, downloadable,
-            expire_hours, view_count_enabled, view_limit)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            expire_hours, view_count_enabled, view_limit, section_name, display_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             material_id, material_title, material_description, material_type, material_link,
             class_id, material_imageurl, material_video_url, material_pdf_url, downloadable ? 1 : 0,
-            expire_hours, view_count_enabled, view_limit
+            expire_hours, view_count_enabled, view_limit, section_name, display_order
           ]
         );
       }

@@ -203,6 +203,31 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
         table: "video_views",
         column: "last_view_at",
         sql: `ALTER TABLE video_views ADD COLUMN last_view_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP`
+      },
+      {
+        table: "class_list",
+        column: "display_order",
+        sql: `ALTER TABLE class_list ADD COLUMN display_order INT DEFAULT 0`
+      },
+      {
+        table: "class_material_list",
+        column: "section_name",
+        sql: `ALTER TABLE class_material_list ADD COLUMN section_name VARCHAR(150) DEFAULT 'General'`
+      },
+      {
+        table: "class_material_list",
+        column: "display_order",
+        sql: `ALTER TABLE class_material_list ADD COLUMN display_order INT DEFAULT 0`
+      },
+      {
+        table: "materials",
+        column: "section_name",
+        sql: `ALTER TABLE materials ADD COLUMN section_name VARCHAR(150) DEFAULT 'General'`
+      },
+      {
+        table: "materials",
+        column: "display_order",
+        sql: `ALTER TABLE materials ADD COLUMN display_order INT DEFAULT 0`
       }
     ];
 

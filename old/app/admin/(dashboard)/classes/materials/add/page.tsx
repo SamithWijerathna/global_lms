@@ -26,6 +26,8 @@ export default function AddMaterialPage() {
   const [formData, setFormData] = useState({
     material_title: "",
     material_description: "",
+    section_name: "",
+    display_order: "0",
     material_link: "",
     expire_hours: "",
     view_limit: "",
@@ -164,6 +166,8 @@ export default function AddMaterialPage() {
       setUploadStatus("Saving to database...");
 
       const dbForm = new FormData();
+      dbForm.append("section_name", formData.section_name || "General");
+      dbForm.append("display_order", formData.display_order || "0");
       dbForm.append("db_insert", "true");
       dbForm.append("material_title", formData.material_title);
       dbForm.append("material_description", formData.material_description || "");
@@ -261,6 +265,27 @@ export default function AddMaterialPage() {
               onChange={handleInputChange}
               name="material_description"
             />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Custom Section Name"
+                placeholder="e.g. Lesson 1: Introduction, Past Papers, Theory Notes"
+                value={formData.section_name}
+                onChange={handleInputChange}
+                name="section_name"
+                description="Custom category or section for grouping materials (default: General)"
+              />
+
+              <Input
+                label="Display Order (Sort Position)"
+                type="number"
+                placeholder="0"
+                value={formData.display_order}
+                onChange={handleInputChange}
+                name="display_order"
+                description="Position number for ordering cards (0 = top)"
+              />
+            </div>
 
             <Select
               label="Material Type *"

@@ -87,6 +87,8 @@ export default function EditMaterialPage() {
           setFormData({
             material_title: mat.material_title,
             material_description: mat.material_description || "",
+            section_name: mat.section_name || "General",
+            display_order: mat.display_order !== undefined && mat.display_order !== null ? String(mat.display_order) : "0",
             material_link: mat.material_link || "",
             expire_hours: mat.expire_hours && mat.expire_hours !== "unlimited" ? mat.expire_hours : "",
             view_limit: mat.view_limit || "",
@@ -211,6 +213,8 @@ export default function EditMaterialPage() {
       const updateForm = new FormData();
       updateForm.append("db_update", "true");
       updateForm.append("material_id", materialId);
+      updateForm.append("section_name", formData.section_name || "General");
+      updateForm.append("display_order", formData.display_order || "0");
       updateForm.append("material_title", formData.material_title);
       updateForm.append("material_description", formData.material_description || "");
       updateForm.append("material_type", materialType);
@@ -303,6 +307,27 @@ export default function EditMaterialPage() {
               onChange={handleInputChange}
               name="material_description"
             />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Custom Section Name"
+                placeholder="e.g. Lesson 1: Introduction, Past Papers, Theory Notes"
+                value={formData.section_name}
+                onChange={handleInputChange}
+                name="section_name"
+                description="Custom category or section for grouping materials"
+              />
+
+              <Input
+                label="Display Order (Sort Position)"
+                type="number"
+                placeholder="0"
+                value={formData.display_order}
+                onChange={handleInputChange}
+                name="display_order"
+                description="Position number for ordering cards (0 = top)"
+              />
+            </div>
 
             <Select
               label="Material Type"

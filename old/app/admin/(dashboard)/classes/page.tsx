@@ -17,16 +17,18 @@ import {
   DeleteDocumentIcon,
 } from "@/components/admin/icons"; // Adjust path
 import {
-
   BookOpen,
   UserRound,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useConfirm } from "@/components/admin/GlobalConfirm";
 
 export default function ClassListPage() {
   const router = useRouter();
-  const [classes, setClasses] = useState([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reordering, setReordering] = useState(false);
   const confirm = useConfirm();
   useEffect(() => {
     fetchClasses();
@@ -43,6 +45,40 @@ export default function ClassListPage() {
     } catch (err) {
       console.error(err);
       setLoading(false);
+    }
+  };
+
+  const handleMoveClass = async (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= classes.length) return;
+
+    const updated = [...classes];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+
+    const items = updated.map((cls, idx) => ({
+      class_id: cls.class_id,
+      display_order: idx,
+    }));
+
+    setClasses(updated);
+    setReordering(true);
+
+    try {
+      await fetch("/api/admin/classes/reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET_TOKEN || ""}`,
+        },
+        body: JSON.stringify({ items }),
+      });
+    } catch (err) {
+      console.error("Reorder failed", err);
+      fetchClasses(); // revert on error
+    } finally {
+      setReordering(false);
     }
   };
 
@@ -116,8 +152,8 @@ export default function ClassListPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {classes.map((cls: any) => (
-            <Card key={cls.id} className="relative w-full h-[400px] overflow-hidden shadow-xl">
+          {classes.map((cls: any, index: number) => (
+            <Card key={cls.id || cls.class_id} className="relative w-full h-[400px] overflow-hidden shadow-xl">
               {/* Background Image */}
               {cls.class_imageurl ? (
                 <Image
@@ -134,6 +170,32 @@ export default function ClassListPage() {
 
               {/* Dark overlay for better text visibility */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10" />
+
+              {/* Reorder Buttons - Top Left Corner */}
+              <div className="absolute top-3 left-3 z-30 flex gap-1">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="bordered"
+                  className="border-white/30 bg-black/40 text-white hover:bg-black/60"
+                  isDisabled={index === 0 || reordering}
+                  onPress={() => handleMoveClass(index, "up")}
+                  title="Move class left/up"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </Button>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="bordered"
+                  className="border-white/30 bg-black/40 text-white hover:bg-black/60"
+                  isDisabled={index === classes.length - 1 || reordering}
+                  onPress={() => handleMoveClass(index, "down")}
+                  title="Move class right/down"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </Button>
+              </div>
 
               {/* 3-Dots Menu - Top Right Corner */}
               {/* Replace the old dropdown with this new one */}

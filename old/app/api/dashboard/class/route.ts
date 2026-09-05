@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "class_data") {
-      const [rows] = await db.query("SELECT * FROM class_list");
+      const [rows] = await db.query("SELECT * FROM class_list ORDER BY display_order ASC, id DESC");
       return NextResponse.json(rows);
     }
 

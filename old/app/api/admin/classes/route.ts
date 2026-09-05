@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   }
   
   // Otherwise, return all classes
-  const [rows] = await db.query("SELECT * FROM class_list ORDER BY id DESC");
+  const [rows] = await db.query("SELECT * FROM class_list ORDER BY display_order ASC, id DESC");
   return NextResponse.json(rows);
 }
 

@@ -104,6 +104,8 @@ if (action === "class_materials") {
         material_video_url,
         material_pdf_url,
         material_link,
+        section_name,
+        display_order,
         downloadable AS pdf_downloadable,
         view_count_enabled AS view_limit_enabled,
         view_limit,
@@ -111,7 +113,7 @@ if (action === "class_materials") {
         create_at
      FROM class_material_list
      WHERE class_id = ?
-     ORDER BY create_at DESC`,
+     ORDER BY display_order ASC, create_at DESC`,
     [class_id]
   );
 
