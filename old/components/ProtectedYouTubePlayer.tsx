@@ -17,12 +17,17 @@ declare global {
   }
 }
 
+import { useAuth } from "@/src/lib/useAuth";
+
 interface ProtectedYouTubePlayerProps {
   url: string;
+  watermarkText?: string;
   className?: string;
 }
 
-export default function ProtectedYouTubePlayer({ url, className = "" }: ProtectedYouTubePlayerProps) {
+export default function ProtectedYouTubePlayer({ url, watermarkText, className = "" }: ProtectedYouTubePlayerProps) {
+  const { user } = useAuth();
+  const displayWatermark = watermarkText || (user?.student_id ? `Lashinigeo - ${user.student_id}` : "Lashinigeo Protected");
   const videoId = getYouTubeId(url);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -186,6 +191,13 @@ export default function ProtectedYouTubePlayer({ url, className = "" }: Protecte
         />
       </div>
 
+      {/* Moving Watermark Overlay */}
+      <div className="absolute inset-0 pointer-events-none z-15 overflow-hidden">
+        <div className="absolute text-white/30 text-xl md:text-2xl font-bold select-none animate-watermark-roam drop-shadow-md whitespace-nowrap">
+          {displayWatermark}
+        </div>
+      </div>
+
       {/* Click-to-toggle play overlay */}
       <div
         className="absolute inset-0 z-10 cursor-pointer flex items-center justify-center"
@@ -256,6 +268,19 @@ export default function ProtectedYouTubePlayer({ url, className = "" }: Protecte
           </div>
         </div>
       </div>
+      <style jsx global>{`
+        @keyframes watermark-roam {
+          0% { top: 5%; left: 5%; transform: rotate(-5deg); }
+          20% { top: 20%; left: 65%; transform: rotate(8deg); }
+          40% { top: 60%; left: 75%; transform: rotate(-10deg); }
+          60% { top: 75%; left: 10%; transform: rotate(5deg); }
+          80% { top: 35%; left: 45%; transform: rotate(-3deg); }
+          100% { top: 5%; left: 5%; transform: rotate(-5deg); }
+        }
+        .animate-watermark-roam {
+          animation: watermark-roam 60s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

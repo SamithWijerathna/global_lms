@@ -243,66 +243,87 @@ function MaterialViewer({
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8">
-        <button
-          onClick={onBack}
-          className="mb-6 flex items-center gap-2 text-primary hover:text-primary-600 transition"
+    <div className="min-h-screen pb-16">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <Button
+          variant="light"
+          onPress={onBack}
+          className="mb-6 font-medium text-default-600 hover:text-primary transition"
+          startContent={
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          }
         >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
           Back to Materials
-        </button>
-        <Card className="overflow-hidden shadow-2xl">
-          <div className="bg-gradient-to-r from-primary to-primary-600 p-8 text-white dark:text-black">
-            <Chip color="white" variant="flat" className="mb-4">
-              {material.material_type?.toUpperCase() || "UNKNOWN"}
-            </Chip>
-            <h1 className="text-3xl font-bold">{material.material_title}</h1>
-            <p className="mt-2 text-primary-100">
-              {material.material_description || "No description"}
-            </p>
-            {(material.view_limit_enabled || material.expire_hours) && (
-              <div className="mt-4 flex flex-wrap gap-3">
-                {material.view_limit_enabled && material.view_limit && (
-                  <Chip color="warning" variant="flat">
-                    Max {material.view_limit} views
-                  </Chip>
-                )}
-                {material.expire_hours && material.expire_hours !== "unlimited" && (
-                  <Chip color="warning" variant="flat">
-                    Expires in {material.expire_hours} hours
-                  </Chip>
-                )}
-                {material.expire_hours === "unlimited" && (
-                  <Chip color="success" variant="flat">
-                    No expiry
+        </Button>
+
+        <Card className="overflow-hidden shadow-2xl border border-default-200 dark:border-default-100 bg-content1">
+          {/* Clean Header Bar */}
+          <div className="p-6 md:p-8 border-b border-default-100 bg-gradient-to-r from-default-100/50 via-content1 to-default-100/50">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip color="primary" variant="solid" className="font-semibold uppercase text-xs">
+                  {material.material_type?.toUpperCase() || "UNKNOWN"}
+                </Chip>
+                {material.section_name && (
+                  <Chip color="secondary" variant="flat" className="capitalize font-semibold text-xs">
+                    {material.section_name}
                   </Chip>
                 )}
               </div>
+              {(material.view_limit_enabled || material.expire_hours) && (
+                <div className="flex flex-wrap gap-2">
+                  {material.view_limit_enabled && material.view_limit && (
+                    <Chip color="warning" variant="flat" size="sm">
+                      Max {material.view_limit} views
+                    </Chip>
+                  )}
+                  {material.expire_hours && material.expire_hours !== "unlimited" && (
+                    <Chip color="warning" variant="flat" size="sm">
+                      Expires in {material.expire_hours} hrs
+                    </Chip>
+                  )}
+                  {material.expire_hours === "unlimited" && (
+                    <Chip color="success" variant="flat" size="sm">
+                      No expiry
+                    </Chip>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
+              {material.material_title}
+            </h1>
+            {material.material_description && (
+              <p className="mt-3 text-default-600 text-sm md:text-base leading-relaxed">
+                {material.material_description}
+              </p>
             )}
             {material.material_type === "pdf" && !material.pdf_downloadable && (
-              <div className="mt-4 flex items-center gap-2 text-primary-100">
-                <AlertCircle className="h-5 w-5" />
-                <span className="text-sm">Download & print disabled</span>
+              <div className="mt-4 flex items-center gap-2 text-warning text-xs font-medium">
+                <AlertCircle className="h-4 w-4" />
+                <span>Download & print disabled for security</span>
               </div>
             )}
           </div>
-          <div className="p-8">
+
+          {/* Player / Content Viewer Section */}
+          <div className="p-4 md:p-8 bg-black/90 dark:bg-black">
             {material.material_type === "video" && material.material_video_url && (
               <div
-                className="relative overflow-hidden rounded-large bg-black"
+                className="relative overflow-hidden rounded-xl bg-black shadow-2xl"
                 style={{ paddingBottom: "56.25%" }}
                 onContextMenu={(e) => e.preventDefault()}
                 onSelectStart={(e) => e.preventDefault()}
@@ -318,35 +339,44 @@ function MaterialViewer({
                   onPlay={handlePlay}
                   onPause={handleStop}
                   onEnded={handleStop}
-                  onTimeUpdate={handleStop} // safety net if user seeks
+                  onTimeUpdate={handleStop}
                 >
                   <source src={material.material_video_url} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute text-white text-2xl md:text-2xl font-bold opacity-20 animate-watermark-roam">
+                <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                  <div className="absolute text-white/30 text-xl md:text-2xl font-bold select-none animate-watermark-roam drop-shadow-md whitespace-nowrap">
                     {watermarkText}
                   </div>
                 </div>
               </div>
             )}
+
             {material.material_pdf_url && (
-              <iframe
-                src={`${material.material_pdf_url}${pdfParams}`}
-                className="h-[80vh] w-full rounded-large border"
-                title={material.material_title}
-                sandbox="allow-same-origin allow-scripts"
-              />
+              <div className="relative overflow-hidden rounded-xl border border-default-200">
+                <iframe
+                  src={`${material.material_pdf_url}${pdfParams}`}
+                  className="h-[80vh] w-full bg-white"
+                  title={material.material_title}
+                  sandbox="allow-same-origin allow-scripts"
+                />
+                <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                  <div className="absolute text-black/20 dark:text-white/30 text-xl md:text-2xl font-bold select-none animate-watermark-roam drop-shadow-sm whitespace-nowrap">
+                    {watermarkText}
+                  </div>
+                </div>
+              </div>
             )}
+
             {material.material_link && (
               getYouTubeId(material.material_link) ? (
-                <div className="w-full max-w-4xl mx-auto py-4">
-                  <ProtectedYouTubePlayer url={material.material_link} />
+                <div className="w-full relative rounded-xl overflow-hidden shadow-2xl">
+                  <ProtectedYouTubePlayer url={material.material_link} watermarkText={watermarkText} />
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="flex flex-col items-center justify-center py-20 text-center bg-content1 rounded-xl">
                   <svg
-                    className="h-20 w-20 text-default-400 mb-6"
+                    className="h-16 w-16 text-primary mb-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -358,9 +388,9 @@ function MaterialViewer({
                       d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                     />
                   </svg>
-                  <h3 className="text-2xl font-bold mb-4">External Link</h3>
-                  <p className="text-default-600 mb-8">
-                    This material opens in a new tab
+                  <h3 className="text-2xl font-bold mb-2">External Link Resource</h3>
+                  <p className="text-default-500 mb-6 max-w-md">
+                    This material is hosted on an external platform. Click below to open in a new tab.
                   </p>
                   <Button
                     as="a"
@@ -380,14 +410,14 @@ function MaterialViewer({
         <style jsx global>{`
           @keyframes watermark-roam {
             0% { top: 5%; left: 5%; transform: rotate(-5deg); }
-            20% { top: 15%; left: 70%; transform: rotate(8deg); }
-            40% { top: 60%; left: 80%; transform: rotate(-10deg); }
-            60% { top: 75%; left: 15%; transform: rotate(5deg); }
-            80% { top: 30%; left: 50%; transform: rotate(-3deg); }
+            20% { top: 20%; left: 65%; transform: rotate(8deg); }
+            40% { top: 60%; left: 75%; transform: rotate(-10deg); }
+            60% { top: 75%; left: 10%; transform: rotate(5deg); }
+            80% { top: 35%; left: 45%; transform: rotate(-3deg); }
             100% { top: 5%; left: 5%; transform: rotate(-5deg); }
           }
           .animate-watermark-roam {
-            animation: watermark-roam 80s ease-in-out infinite;
+            animation: watermark-roam 60s ease-in-out infinite;
           }
         `}</style>
       </div>
