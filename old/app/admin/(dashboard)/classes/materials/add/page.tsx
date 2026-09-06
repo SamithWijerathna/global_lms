@@ -6,7 +6,7 @@ import {
   CardBody,
 } from "@heroui/card";
 import { Input } from "@heroui/input";
-import { Select, SelectItem } from "@heroui/select";
+import { Select, SelectItem, SelectSection } from "@heroui/select";
 import { Button } from "@heroui/button";
 import { Switch } from "@heroui/switch";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
@@ -17,16 +17,31 @@ import ProtectedYouTubePlayer, { getYouTubeId } from "@/components/ProtectedYouT
 
 const CHUNK_SIZE = 16 * 1024 * 1024;
 
+const PREDEFINED_SECTIONS = [
+  "Lesson 1",
+  "Lesson 2",
+  "Lesson 3",
+  "Lesson 4",
+  "Lesson 5",
+  "Theory",
+  "Revision",
+  "Paper Discussion",
+  "Past Papers",
+  "Model Papers",
+  "General",
+];
+
 export default function AddMaterialPage() {
   const [classes, setClasses] = useState([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
+  const [isCustomSection, setIsCustomSection] = useState(false);
 
   const [materialType, setMaterialType] = useState<"video" | "pdf" | "link">("video");
 
   const [formData, setFormData] = useState({
     material_title: "",
     material_description: "",
-    section_name: "",
+    section_name: "General",
     display_order: "0",
     material_link: "",
     expire_hours: "",
@@ -267,14 +282,49 @@ export default function AddMaterialPage() {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Custom Section Name"
-                placeholder="e.g. Lesson 1: Introduction, Past Papers, Theory Notes"
-                value={formData.section_name}
-                onChange={handleInputChange}
-                name="section_name"
-                description="Custom category or section for grouping materials (default: General)"
-              />
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-default-700">Section Name</label>
+                  <Button
+                    size="sm"
+                    variant="light"
+                    color="primary"
+                    className="h-6 px-2 text-xs"
+                    onPress={() => {
+                      setIsCustomSection(!isCustomSection);
+                      if (!isCustomSection) setFormData({ ...formData, section_name: "" });
+                    }}
+                  >
+                    {isCustomSection ? "Predefined List" : "+ Custom Section"}
+                  </Button>
+                </div>
+                {isCustomSection ? (
+                  <Input
+                    placeholder="e.g. Special Lesson, Revision 01"
+                    value={formData.section_name}
+                    onChange={handleInputChange}
+                    name="section_name"
+                    size="sm"
+                  />
+                ) : (
+                  <Select
+                    aria-label="Select Section"
+                    placeholder="Select predefined section"
+                    selectedKeys={formData.section_name ? [formData.section_name] : []}
+                    onSelectionChange={(keys) => {
+                      const val = Array.from(keys)[0] as string;
+                      if (val) setFormData({ ...formData, section_name: val });
+                    }}
+                    size="sm"
+                  >
+                    {PREDEFINED_SECTIONS.map((sec) => (
+                      <SelectItem key={sec} textValue={sec}>
+                        {sec}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                )}
+              </div>
 
               <Input
                 label="Display Order (Sort Position)"
@@ -399,22 +449,35 @@ export default function AddMaterialPage() {
 
             {loadingClasses ? (
               <div className="h-12 bg-gray-200 rounded-lg animate-pulse" />
-            ) : (
-              <Select
-                label="Assign to Classes *"
-                selectionMode="multiple"
-                placeholder="Select classes"
-                selectedKeys={selectedClasses}
-                onSelectionChange={(keys) => setSelectedClasses(Array.from(keys as Set<string>))}
-                renderValue={() => getSelectedClassNames()}
-              >
-                {classes.map((cls: any) => (
-                  <SelectItem key={cls.class_id} value={cls.class_id}>
-                    {cls.class_title} ({cls.class_id})
-                  </SelectItem>
-                ))}
-              </Select>
-            )}
+            ) : (() => {
+              const classesByBatch = (classes as any[]).reduce((acc: any, cls: any) => {
+                const batchName = cls.batch || "Other Batches";
+                if (!acc[batchName]) acc[batchName] = [];
+                acc[batchName].push(cls);
+                return acc;
+              }, {});
+
+              return (
+                <Select
+                  label="Assign to Classes (Separated by Batch) *"
+                  selectionMode="multiple"
+                  placeholder="Select classes"
+                  selectedKeys={selectedClasses}
+                  onSelectionChange={(keys) => setSelectedClasses(Array.from(keys as Set<string>))}
+                  renderValue={() => getSelectedClassNames()}
+                >
+                  {Object.entries(classesByBatch).map(([batchName, batchClasses]: [string, any]) => (
+                    <SelectSection key={batchName} title={`Batch Section: ${batchName}`}>
+                      {batchClasses.map((cls: any) => (
+                        <SelectItem key={cls.class_id} textValue={`${cls.class_title} (${cls.class_id})`}>
+                          {cls.class_title} ({cls.class_id})
+                        </SelectItem>
+                      ))}
+                    </SelectSection>
+                  ))}
+                </Select>
+              );
+            })()}
 
             <Button
               type="submit"

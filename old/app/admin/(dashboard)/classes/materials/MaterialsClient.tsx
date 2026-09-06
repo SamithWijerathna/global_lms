@@ -291,11 +291,14 @@ export default function MaterialsPage() {
           <p className="text-xl text-default-500">No materials in this class yet.</p>
         </div>
       ) : (() => {
-        const sections = Array.from(
-          new Set(materials.map((m: any) => m.section_name || "General"))
+        const hasCustomSections = materials.some(
+          (m: any) => m.section_name && m.section_name.trim() !== "" && m.section_name.toLowerCase() !== "general"
         );
+        const sections = hasCustomSections
+          ? Array.from(new Set(materials.map((m: any) => m.section_name || "General")))
+          : [];
         const sectionFiltered =
-          selectedSection === "ALL"
+          !hasCustomSections || selectedSection === "ALL"
             ? materials
             : materials.filter(
                 (m: any) => (m.section_name || "General") === selectedSection
@@ -311,35 +314,37 @@ export default function MaterialsPage() {
           <div>
             {/* Search & Section Filter Bar */}
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
-              {/* Toggleable Custom Section Cards / Chips */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-                <Button
-                  size="sm"
-                  variant={selectedSection === "ALL" ? "solid" : "flat"}
-                  color={selectedSection === "ALL" ? "primary" : "default"}
-                  onPress={() => setSelectedSection("ALL")}
-                  className="font-medium"
-                >
-                  All Sections ({materials.length})
-                </Button>
-                {sections.map((secName) => {
-                  const count = materials.filter(
-                    (m: any) => (m.section_name || "General") === secName
-                  ).length;
-                  return (
-                    <Button
-                      key={secName}
-                      size="sm"
-                      variant={selectedSection === secName ? "solid" : "flat"}
-                      color={selectedSection === secName ? "primary" : "default"}
-                      onPress={() => setSelectedSection(secName)}
-                      className="font-medium capitalize"
-                    >
-                      {secName} ({count})
-                    </Button>
-                  );
-                })}
-              </div>
+              {/* Toggleable Custom Section Cards / Chips (Only if custom sections exist) */}
+              {hasCustomSections ? (
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+                  <Button
+                    size="sm"
+                    variant={selectedSection === "ALL" ? "solid" : "flat"}
+                    color={selectedSection === "ALL" ? "primary" : "default"}
+                    onPress={() => setSelectedSection("ALL")}
+                    className="font-medium"
+                  >
+                    All Sections ({materials.length})
+                  </Button>
+                  {sections.map((secName) => {
+                    const count = materials.filter(
+                      (m: any) => (m.section_name || "General") === secName
+                    ).length;
+                    return (
+                      <Button
+                        key={secName}
+                        size="sm"
+                        variant={selectedSection === secName ? "solid" : "flat"}
+                        color={selectedSection === secName ? "primary" : "default"}
+                        onPress={() => setSelectedSection(secName)}
+                        className="font-medium capitalize"
+                      >
+                        {secName} ({count})
+                      </Button>
+                    );
+                  })}
+                </div>
+              ) : <div />}
 
               {/* Search Box */}
               <div className="w-full md:w-72">
@@ -369,16 +374,18 @@ export default function MaterialsPage() {
                 <div className="space-y-10">
                   {Object.entries(displayedBySection).map(([sectionName, secMats]) => (
                     <div key={sectionName}>
-                      {/* Section Header / Text Separator */}
-                      <div className="flex items-center gap-3 mb-6 pb-2 border-b border-default-200 dark:border-default-100">
-                        <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-sm" />
-                        <h3 className="text-xl font-bold text-foreground capitalize tracking-wide">
-                          {sectionName}
-                        </h3>
-                        <Chip color="secondary" variant="flat" size="sm" className="font-semibold">
-                          {secMats.length} item{secMats.length !== 1 ? "s" : ""}
-                        </Chip>
-                      </div>
+                      {/* Section Header / Text Separator (Only if custom sections exist) */}
+                      {hasCustomSections && (
+                        <div className="flex items-center gap-3 mb-6 pb-2 border-b border-default-200 dark:border-default-100">
+                          <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-sm" />
+                          <h3 className="text-xl font-bold text-foreground capitalize tracking-wide">
+                            {sectionName}
+                          </h3>
+                          <Chip color="secondary" variant="flat" size="sm" className="font-semibold">
+                            {secMats.length} item{secMats.length !== 1 ? "s" : ""}
+                          </Chip>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {secMats.map((mat: any) => {

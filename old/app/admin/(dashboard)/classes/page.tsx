@@ -10,6 +10,7 @@ import { Image } from "@heroui/image";
 import { Button } from "@heroui/button";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
 import { Skeleton } from "@heroui/skeleton";
+import { Chip } from "@heroui/chip";
 import { VerticalDotsIcon } from "@/components/admin/icons"; // Adjust path
 import Link from "next/link";
 import {
@@ -113,7 +114,6 @@ export default function ClassListPage() {
       },
     });
 
-    // Optional, but keeps logic clear
     if (!confirmed) return;
   };
 
@@ -150,141 +150,169 @@ export default function ClassListPage() {
             <Button color="primary">Create Your First Class</Button>
           </Link>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {classes.map((cls: any, index: number) => (
-            <Card key={cls.id || cls.class_id} className="relative w-full h-[400px] overflow-hidden shadow-xl">
-              {/* Background Image */}
-              {cls.class_imageurl ? (
-                <Image
-                  removeWrapper
-                  alt={cls.class_title}
-                  className="z-0 w-full h-full object-cover"
-                  src={cls.class_imageurl}
-                />
-              ) : (
-                <div className="z-0 w-full h-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center">
-                  <span className="text-white/80 text-xl font-medium">No Image</span>
+      ) : (() => {
+        const classesByBatch = classes.reduce((acc, cls) => {
+          const batchName = cls.batch || "Other Batches";
+          if (!acc[batchName]) acc[batchName] = [];
+          acc[batchName].push(cls);
+          return acc;
+        }, {} as Record<string, any[]>);
+
+        return (
+          <div className="space-y-12">
+            {Object.entries(classesByBatch).map(([batchName, batchClasses]) => (
+              <div key={batchName}>
+                {/* Batch Section Header */}
+                <div className="flex items-center gap-3 mb-6 pb-2 border-b border-default-200 dark:border-default-800">
+                  <span className="w-3 h-3 rounded-full bg-primary shadow-sm" />
+                  <h2 className="text-2xl font-bold text-foreground capitalize tracking-wide">
+                    Batch Section: {batchName}
+                  </h2>
+                  <Chip color="primary" variant="flat" size="sm" className="font-semibold">
+                    {batchClasses.length} class{batchClasses.length !== 1 ? "es" : ""}
+                  </Chip>
                 </div>
-              )}
 
-              {/* Dark overlay for better text visibility */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {batchClasses.map((cls: any) => {
+                    const originalIndex = classes.findIndex((c) => (c.id || c.class_id) === (cls.id || cls.class_id));
 
-              {/* Reorder Buttons - Top Left Corner */}
-              <div className="absolute top-3 left-3 z-30 flex gap-1">
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="bordered"
-                  className="border-white/30 bg-black/40 text-white hover:bg-black/60"
-                  isDisabled={index === 0 || reordering}
-                  onPress={() => handleMoveClass(index, "up")}
-                  title="Move class left/up"
-                >
-                  <ArrowUp className="w-4 h-4" />
-                </Button>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="bordered"
-                  className="border-white/30 bg-black/40 text-white hover:bg-black/60"
-                  isDisabled={index === classes.length - 1 || reordering}
-                  onPress={() => handleMoveClass(index, "down")}
-                  title="Move class right/down"
-                >
-                  <ArrowDown className="w-4 h-4" />
-                </Button>
-              </div>
+                    return (
+                      <Card key={cls.id || cls.class_id} className="relative w-full h-[400px] overflow-hidden shadow-xl">
+                        {/* Background Image */}
+                        {cls.class_imageurl ? (
+                          <Image
+                            removeWrapper
+                            alt={cls.class_title}
+                            className="z-0 w-full h-full object-cover"
+                            src={cls.class_imageurl}
+                          />
+                        ) : (
+                          <div className="z-0 w-full h-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center">
+                            <span className="text-white/80 text-xl font-medium">No Image</span>
+                          </div>
+                        )}
 
-              {/* 3-Dots Menu - Top Right Corner */}
-              {/* Replace the old dropdown with this new one */}
-              <div className="absolute top-3 right-3 z-30">
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button isIconOnly size="sm" variant="bordered" className="border-white/30 bg-white/10">
-                      <VerticalDotsIcon className="w-5 h-5 text-white" />
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownMenu aria-label="Class actions" variant="faded">
-                    <DropdownItem
-                      key="edit"
-                      description="Modify class details"
-                      shortcut="⌘E"
-                      startContent={<EditDocumentIcon className="w-5 h-5 text-default-600" />}
-                      onPress={() => router.push(`/admin/classes/edit/${cls.class_id}`)}
-                    >
-                      Edit Class
-                    </DropdownItem>
-                    <DropdownItem
-                      key="materials"
-                      description="View and manage class materials"
-                      shortcut="⌘M"
-                      startContent={<BookOpen className="w-5 h-5 text-default-600" />}
-                      onPress={() => router.push(`/admin/classes/materials?class_id=${cls.class_id}`)}
-                    >
-                      View Materials
-                    </DropdownItem>
-                    <DropdownItem
-                      showDivider
-                      key="students"
-                      description="See enrolled students"
-                      shortcut="⌘S"
-                      startContent={<UserRound className="w-5 h-5 text-default-600" />}
-                      onPress={() => router.push(`/admin/classes/students/${cls.class_id}`)}
-                    >
-                      Enrolled Students
-                    </DropdownItem>
-                    <DropdownItem
+                        {/* Dark overlay for better text visibility */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10" />
 
-                      key="delete"
-                      className="text-danger"
-                      color="danger"
-                      description="Permanently remove this class"
-                      shortcut="⌘⇧D"
-                      startContent={<DeleteDocumentIcon className="w-5 h-5 text-danger" />}
-                      onPress={() => handleDelete(cls.id)}
-                    >
-                      Delete Class
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
-              </div>
+                        {/* Reorder Buttons - Top Left Corner */}
+                        <div className="absolute top-3 left-3 z-30 flex gap-1">
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="bordered"
+                            className="border-white/30 bg-black/40 text-white hover:bg-black/60"
+                            isDisabled={originalIndex === 0 || reordering}
+                            onPress={() => handleMoveClass(originalIndex, "up")}
+                            title="Move class left/up"
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="bordered"
+                            className="border-white/30 bg-black/40 text-white hover:bg-black/60"
+                            isDisabled={originalIndex === classes.length - 1 || reordering}
+                            onPress={() => handleMoveClass(originalIndex, "down")}
+                            title="Move class right/down"
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </Button>
+                        </div>
 
-              {/* Footer with Class Details */}
-              <CardFooter className="absolute bg-white/30 backdrop-blur-md bottom-0 border-t-1 border-zinc-100/50 z-20 w-full">
-                <div className="flex flex-col gap-1 w-full px-4 py-3">
-                  <h4 className="text-white font-semibold text-2xl drop-shadow-lg">
-                    {cls.class_title}
-                  </h4>
+                        {/* 3-Dots Menu - Top Right Corner */}
+                        <div className="absolute top-3 right-3 z-30">
+                          <Dropdown>
+                            <DropdownTrigger>
+                              <Button isIconOnly size="sm" variant="bordered" className="border-white/30 bg-white/10">
+                                <VerticalDotsIcon className="w-5 h-5 text-white" />
+                              </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu aria-label="Class actions" variant="faded">
+                              <DropdownItem
+                                key="edit"
+                                description="Modify class details"
+                                shortcut="⌘E"
+                                startContent={<EditDocumentIcon className="w-5 h-5 text-default-600" />}
+                                onPress={() => router.push(`/admin/classes/edit/${cls.class_id}`)}
+                              >
+                                Edit Class
+                              </DropdownItem>
+                              <DropdownItem
+                                key="materials"
+                                description="View and manage class materials"
+                                shortcut="⌘M"
+                                startContent={<BookOpen className="w-5 h-5 text-default-600" />}
+                                onPress={() => router.push(`/admin/classes/materials?class_id=${cls.class_id}`)}
+                              >
+                                View Materials
+                              </DropdownItem>
+                              <DropdownItem
+                                showDivider
+                                key="students"
+                                description="See enrolled students"
+                                shortcut="⌘S"
+                                startContent={<UserRound className="w-5 h-5 text-default-600" />}
+                                onPress={() => router.push(`/admin/classes/students/${cls.class_id}`)}
+                              >
+                                Enrolled Students
+                              </DropdownItem>
+                              <DropdownItem
+                                key="delete"
+                                className="text-danger"
+                                color="danger"
+                                description="Permanently remove this class"
+                                shortcut="⌘⇧D"
+                                startContent={<DeleteDocumentIcon className="w-5 h-5 text-danger" />}
+                                onPress={() => handleDelete(cls.id)}
+                              >
+                                Delete Class
+                              </DropdownItem>
+                            </DropdownMenu>
+                          </Dropdown>
+                        </div>
 
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-white text-lg font-bold drop-shadow">
-                        Rs {cls.class_price}
-                      </p>
-                      <p className="text-white/80 text-sm">
-                        {cls.batch} • {cls.class_type} • {cls.renew_type}
-                      </p>
-                      <p className="text-white/70 text-xs mt-1">
-                        {cls.class_description || "No description available"}
-                      </p>
-                    </div>
-                    <Button
-                      className="text-tiny font-medium"
-                      color="primary"
-                      radius="full"
-                      size="sm"
-                    >
-                      Enroll Now
-                    </Button>
-                  </div>
+                        {/* Footer with Class Details */}
+                        <CardFooter className="absolute bg-white/30 backdrop-blur-md bottom-0 border-t-1 border-zinc-100/50 z-20 w-full">
+                          <div className="flex flex-col gap-1 w-full px-4 py-3">
+                            <h4 className="text-white font-semibold text-2xl drop-shadow-lg">
+                              {cls.class_title}
+                            </h4>
+
+                            <div className="flex justify-between items-end">
+                              <div>
+                                <p className="text-white text-lg font-bold drop-shadow">
+                                  Rs {cls.class_price}
+                                </p>
+                                <p className="text-white/80 text-sm">
+                                  {cls.batch} • {cls.class_type} • {cls.renew_type}
+                                </p>
+                                <p className="text-white/70 text-xs mt-1">
+                                  {cls.class_description || "No description available"}
+                                </p>
+                              </div>
+                              <Button
+                                className="text-tiny font-medium"
+                                color="primary"
+                                radius="full"
+                                size="sm"
+                              >
+                                Enroll Now
+                              </Button>
+                            </div>
+                          </div>
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
                 </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

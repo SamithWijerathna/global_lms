@@ -722,6 +722,9 @@ export default function QuickAccessPage() {
       ) : (
         <div>
           {Object.entries(groupedMaterials).map(([classTitle, classMats]) => {
+            const hasCustomSections = classMats.some(
+              (m) => m.section_name && m.section_name.trim() !== "" && m.section_name.toLowerCase() !== "general"
+            );
             // Group class materials by custom section
             const groupedBySection = classMats.reduce((secAcc, mat) => {
               const secKey = mat.section_name || "General";
@@ -746,16 +749,18 @@ export default function QuickAccessPage() {
                 {/* Sections inside Class */}
                 {Object.entries(groupedBySection).map(([sectionName, secMaterials]) => (
                   <div key={sectionName} className="mb-10 pl-2 md:pl-4">
-                    {/* Section Header / Text Separator */}
-                    <div className="flex items-center gap-3 mb-6 pb-2 border-b border-default-200 dark:border-default-100">
-                      <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-sm" />
-                      <h3 className="text-xl font-bold text-foreground capitalize tracking-wide">
-                        {sectionName}
-                      </h3>
-                      <Chip color="secondary" variant="flat" size="sm" className="font-semibold">
-                        {secMaterials.length} item{secMaterials.length !== 1 ? "s" : ""}
-                      </Chip>
-                    </div>
+                    {/* Section Header / Text Separator (Only if custom sections exist) */}
+                    {hasCustomSections && (
+                      <div className="flex items-center gap-3 mb-6 pb-2 border-b border-default-200 dark:border-default-100">
+                        <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-sm" />
+                        <h3 className="text-xl font-bold text-foreground capitalize tracking-wide">
+                          {sectionName}
+                        </h3>
+                        <Chip color="secondary" variant="flat" size="sm" className="font-semibold">
+                          {secMaterials.length} item{secMaterials.length !== 1 ? "s" : ""}
+                        </Chip>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                       {secMaterials.map((material) => {
