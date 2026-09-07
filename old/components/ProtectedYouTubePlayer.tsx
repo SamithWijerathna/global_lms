@@ -10,6 +10,30 @@ export function getYouTubeId(url: string): string | null {
   return match && match[2].length === 11 ? match[2] : null;
 }
 
+export function getYouTubeThumbnail(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const videoId = getYouTubeId(url);
+  return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+}
+
+export function getMaterialCoverImage(mat: {
+  material_imageurl?: string | null;
+  material_video_url?: string | null;
+  material_link?: string | null;
+} | null | undefined): string | null {
+  if (!mat) return null;
+  if (mat.material_imageurl && mat.material_imageurl.trim() !== "") {
+    return mat.material_imageurl;
+  }
+  const videoThumb = getYouTubeThumbnail(mat.material_video_url);
+  if (videoThumb) return videoThumb;
+
+  const linkThumb = getYouTubeThumbnail(mat.material_link);
+  if (linkThumb) return linkThumb;
+
+  return null;
+}
+
 declare global {
   interface Window {
     YT: any;

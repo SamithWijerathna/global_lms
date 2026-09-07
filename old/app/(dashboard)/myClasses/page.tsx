@@ -21,7 +21,7 @@ import {
 import { Input } from "@heroui/input";
 import { useAuth } from "@/src/lib/useAuth";
 import BankTransferSection from "@/components/BankTransferSection";
-import ProtectedYouTubePlayer, { getYouTubeId } from "@/components/ProtectedYouTubePlayer";
+import ProtectedYouTubePlayer, { getYouTubeId, getMaterialCoverImage } from "@/components/ProtectedYouTubePlayer";
 
 type ClassItem = {
   class_id: string;
@@ -820,10 +820,10 @@ export default function MyLessonPage() {
                                     : "hover:shadow-2xl hover:scale-[1.02]"
                                 }`}
                               >
-                                {material.material_imageurl && (
+                                {getMaterialCoverImage(material) && (
                                   <Image
                                     removeWrapper
-                                    src={material.material_imageurl}
+                                    src={getMaterialCoverImage(material)!}
                                     alt={material.material_title}
                                     className="h-48 w-full object-cover"
                                   />

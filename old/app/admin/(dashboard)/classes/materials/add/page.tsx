@@ -13,7 +13,7 @@ import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@herou
 import { Progress } from "@heroui/progress";
 import { Chip } from "@heroui/chip";
 import { Image } from "@heroui/image";
-import ProtectedYouTubePlayer, { getYouTubeId } from "@/components/ProtectedYouTubePlayer";
+import ProtectedYouTubePlayer, { getYouTubeId, getYouTubeThumbnail } from "@/components/ProtectedYouTubePlayer";
 
 const CHUNK_SIZE = 16 * 1024 * 1024;
 
@@ -504,29 +504,37 @@ export default function AddMaterialPage() {
             </Card>
           ) : (
             <Card className="w-full max-w-md shadow-2xl overflow-hidden relative">
-              {materialType === "link" && getYouTubeId(formData.material_link) ? (
-                <ProtectedYouTubePlayer url={formData.material_link} />
-              ) : imagePreview ? (
-                <Image
-                  removeWrapper
-                  alt="Cover"
-                  className="w-full h-[300px] object-cover"
-                  src={imagePreview}
-                />
-              ) : (
-                <div className="w-full h-[300px] bg-gradient-to-br from-purple-900 to-indigo-950 flex flex-col items-center justify-center text-white/80 p-6 relative">
-                  <span className="text-5xl font-black tracking-widest uppercase opacity-40">
-                    {materialType}
-                  </span>
-                  <Chip
-                    className="absolute top-4 right-4 capitalize font-semibold"
-                    color={getTypeChipColor()}
-                    variant="solid"
-                  >
-                    {materialType}
-                  </Chip>
-                </div>
-              )}
+              {(() => {
+                const ytThumb = getYouTubeThumbnail(formData.material_video_url) || getYouTubeThumbnail(formData.material_link);
+                const previewImage = imagePreview || ytThumb;
+                if (materialType === "link" && getYouTubeId(formData.material_link)) {
+                  return <ProtectedYouTubePlayer url={formData.material_link} />;
+                }
+                if (previewImage) {
+                  return (
+                    <Image
+                      removeWrapper
+                      alt="Cover"
+                      className="w-full h-[300px] object-cover"
+                      src={previewImage}
+                    />
+                  );
+                }
+                return (
+                  <div className="w-full h-[300px] bg-gradient-to-br from-purple-900 to-indigo-950 flex flex-col items-center justify-center text-white/80 p-6 relative">
+                    <span className="text-5xl font-black tracking-widest uppercase opacity-40">
+                      {materialType}
+                    </span>
+                    <Chip
+                      className="absolute top-4 right-4 capitalize font-semibold"
+                      color={getTypeChipColor()}
+                      variant="solid"
+                    >
+                      {materialType}
+                    </Chip>
+                  </div>
+                );
+              })()}
 
               {(videoPreview || pdfFile) && (
                 <div

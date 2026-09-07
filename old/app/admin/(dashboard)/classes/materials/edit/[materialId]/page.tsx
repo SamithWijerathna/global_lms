@@ -13,7 +13,7 @@ import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@herou
 import { Progress } from "@heroui/progress";
 import { Chip } from "@heroui/chip";
 import { Image } from "@heroui/image";
-import ProtectedYouTubePlayer, { getYouTubeId } from "@/components/ProtectedYouTubePlayer";
+import ProtectedYouTubePlayer, { getYouTubeId, getYouTubeThumbnail } from "@/components/ProtectedYouTubePlayer";
 import { useParams } from "next/navigation";
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
@@ -547,20 +547,28 @@ export default function EditMaterialPage() {
         {/* Live Preview */}
         <div className="flex items-start justify-center">
           <Card className="w-full max-w-md shadow-2xl overflow-hidden relative">
-            {materialType === "link" && getYouTubeId(formData.material_link) ? (
-              <ProtectedYouTubePlayer url={formData.material_link} />
-            ) : imagePreview || currentImageUrl ? (
-              <Image
-                removeWrapper
-                alt="Cover"
-                className="w-full h-[300px] object-cover"
-                src={imagePreview || currentImageUrl!}
-              />
-            ) : (
-              <div className="w-full h-[300px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <span className="text-white text-3xl font-bold">Cover Image</span>
-              </div>
-            )}
+            {(() => {
+              const ytThumb = getYouTubeThumbnail(formData.material_video_url) || getYouTubeThumbnail(formData.material_link);
+              const previewImage = imagePreview || currentImageUrl || ytThumb;
+              if (materialType === "link" && getYouTubeId(formData.material_link)) {
+                return <ProtectedYouTubePlayer url={formData.material_link} />;
+              }
+              if (previewImage) {
+                return (
+                  <Image
+                    removeWrapper
+                    alt="Cover"
+                    className="w-full h-[300px] object-cover"
+                    src={previewImage}
+                  />
+                );
+              }
+              return (
+                <div className="w-full h-[300px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-white text-3xl font-bold">Cover Image</span>
+                </div>
+              );
+            })()}
 
             <div className="absolute top-3 right-3 z-10">
               <Chip color={getTypeChipColor()} size="lg" variant="shadow">

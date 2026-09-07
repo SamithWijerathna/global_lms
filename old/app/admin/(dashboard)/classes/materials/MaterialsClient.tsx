@@ -7,7 +7,7 @@ import {
   CardFooter,
 } from "@heroui/card";
 import { Image } from "@heroui/image";
-import ProtectedYouTubePlayer, { getYouTubeId } from "@/components/ProtectedYouTubePlayer";
+import ProtectedYouTubePlayer, { getYouTubeId, getMaterialCoverImage } from "@/components/ProtectedYouTubePlayer";
 import { Button } from "@heroui/button";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
@@ -392,18 +392,19 @@ export default function MaterialsPage() {
                           const originalIndex = materials.findIndex(
                             (m: any) => m.material_id === mat.material_id
                           );
+                          const coverImage = getMaterialCoverImage(mat);
                           return (
                             <Card key={mat.material_id} className="shadow-lg relative overflow-hidden">
                               <div
                                 className="relative h-[200px] cursor-pointer"
                                 onClick={() => handlePreview(mat)}
                               >
-                                {mat.material_imageurl ? (
+                                {coverImage ? (
                                   <Image
                                     removeWrapper
                                     alt={mat.material_title}
                                     className="w-full h-full object-cover rounded-t-lg"
-                                    src={mat.material_imageurl}
+                                    src={coverImage}
                                   />
                                 ) : (
                                   <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">

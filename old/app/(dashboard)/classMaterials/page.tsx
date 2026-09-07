@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/src/lib/useAuth";
 import BankTransferSection from "@/components/BankTransferSection";
-import ProtectedYouTubePlayer, { getYouTubeId } from "@/components/ProtectedYouTubePlayer";
+import ProtectedYouTubePlayer, { getYouTubeId, getMaterialCoverImage } from "@/components/ProtectedYouTubePlayer";
 
 type ClassItem = {
   class_id: string;
@@ -773,19 +773,24 @@ export default function QuickAccessPage() {
                             new Date(material.create_at).getTime() +
                               material.expire_hours * 3600000;
 
+                        const coverImage = getMaterialCoverImage(material);
                         return (
                           <Card
                             key={material.material_id}
-                            className={`relative overflow-hidden shadow-lg transition-all ${
+                            isPressable={!isExpired}
+                            onPress={
+                              isExpired ? undefined : () => setSelectedMaterial(material)
+                            }
+                            className={`overflow-hidden shadow-lg transition-all relative ${
                               isExpired
                                 ? "opacity-60 grayscale"
                                 : "hover:shadow-2xl hover:scale-[1.02]"
                             }`}
                           >
-                            {material.material_imageurl && (
+                            {coverImage && (
                               <Image
                                 removeWrapper
-                                src={material.material_imageurl}
+                                src={coverImage}
                                 alt={material.material_title}
                                 className="h-48 w-full object-cover rounded-t-large"
                               />
