@@ -18,6 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/src/lib/useAuth";
+import BankTransferSection from "@/components/BankTransferSection";
 import ProtectedYouTubePlayer, { getYouTubeId } from "@/components/ProtectedYouTubePlayer";
 
 type ClassItem = {
@@ -449,7 +450,7 @@ export default function QuickAccessPage() {
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentClass, setPaymentClass] = useState<ClassItem | null>(null);
-  const [bankChoice, setBankChoice] = useState<"commercial" | "hnb">("commercial");
+  const [bankChoice, setBankChoice] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -976,71 +977,14 @@ export default function QuickAccessPage() {
                       }
                     >
                       <div className="space-y-6">
-                        <RadioGroup
-                          label="Select Bank"
-                          value={bankChoice}
-                          onValueChange={setBankChoice as any}
-                        >
-                          <Radio value="commercial">
-                            <Building2 className="h-4 w-4 mr-2" />
-                            Commercial Bank
-                          </Radio>
-                          <Radio value="hnb">
-                            <Building2 className="h-4 w-4 mr-2" />
-                            Hatton National Bank
-                          </Radio>
-                        </RadioGroup>
-                        <Card className="bg-default-100 p-5">
-                          {bankChoice === "commercial" ? (
-                            <>
-                              <p><strong>Bank:</strong> Commercial Bank</p>
-                              <p><strong>Account Name:</strong> R A S T Rajapaksha</p>
-                              <p><strong>Account Number:</strong> 802 092 806 9</p>
-                              <p><strong>Branch:</strong> Pilimathalawa</p>
-                            </>
-                          ) : (
-                            <>
-                              <p><strong>Bank:</strong> Hatton National Bank</p>
-                              <p><strong>Account Name:</strong> R A S T Rajapaksha</p>
-                              <p><strong>Account Number:</strong> 141020146041</p>
-                              <p><strong>Branch:</strong> Pilimathalawa</p>
-                            </>
-                          )}
-                        </Card>
-                        <div>
-                          <p className="font-medium mb-3">
-                            Upload Payment Receipt
-                          </p>
-                          <label className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer bg-default-50 hover:bg-default-100 overflow-hidden">
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <Upload className="h-12 w-12 text-default-400 mb-4" />
-                              <p className="text-sm text-default-600">
-                                <span className="font-semibold">Click to upload</span> or drag and drop
-                              </p>
-                              <p className="text-xs text-default-500">Image or PDF</p>
-                            </div>
-                            {preview && file?.type.startsWith("image/") && (
-                              <img
-                                src={preview}
-                                alt="Preview"
-                                className="absolute inset-0 w-full h-full object-contain p-2 bg-default-100/50 rounded-xl"
-                              />
-                            )}
-                            {file && !file.type.startsWith("image/") && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-default-100/80 rounded-xl">
-                                <p className="text-default-700 font-medium">
-                                  PDF: {file.name}
-                                </p>
-                              </div>
-                            )}
-                            <input
-                              type="file"
-                              accept="image/*,.pdf"
-                              className="hidden"
-                              onChange={handleFileChange}
-                            />
-                          </label>
-                        </div>
+                        <BankTransferSection
+                          bankChoice={bankChoice}
+                          setBankChoice={setBankChoice}
+                          file={file}
+                          onFileChange={handleFileChange}
+                          preview={preview}
+                          uploading={uploading}
+                        />
                         <Button
                           fullWidth
                           size="lg"

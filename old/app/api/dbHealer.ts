@@ -141,6 +141,24 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
           PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
       }
+      {
+        name: "bank_accounts",
+        sql: `CREATE TABLE IF NOT EXISTS bank_accounts (
+          id INT NOT NULL AUTO_INCREMENT,
+          uuid VARCHAR(255) NOT NULL UNIQUE,
+          bank_name VARCHAR(150) NOT NULL,
+          account_name VARCHAR(150) NOT NULL,
+          account_number VARCHAR(100) NOT NULL,
+          branch_name VARCHAR(150) DEFAULT NULL,
+          account_type VARCHAR(100) DEFAULT NULL,
+          instructions TEXT DEFAULT NULL,
+          is_active TINYINT(1) DEFAULT '1',
+          display_order INT DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      }
     ];
 
     for (const t of tablesToEnsure) {
@@ -148,6 +166,19 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
       if (!exists) {
         await pool.query(t.sql);
         logs.push(`Created table: ${t.name}`);
+      }
+    }
+
+    // Seed initial bank accounts if table is empty
+    if (await tableExists(pool, "bank_accounts")) {
+      const [bankRows] = await pool.query<any[]>("SELECT COUNT(*) as count FROM bank_accounts");
+      if (bankRows && bankRows[0]?.count === 0) {
+        await pool.query(`
+          INSERT INTO bank_accounts (uuid, bank_name, account_name, account_number, branch_name, is_active, display_order) VALUES
+          ('ba-comm-01', 'Commercial Bank', 'R A S T Rajapaksha', '802 092 806 9', 'Pilimathalawa', 1, 1),
+          ('ba-hnb-02', 'Hatton National Bank', 'R A S T Rajapaksha', '141020146041', 'Pilimathalawa', 1, 2)
+        `);
+        logs.push("Seeded initial bank accounts into table 'bank_accounts'");
       }
     }
 
@@ -237,6 +268,29 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
         if (!hasCol) {
           await pool.query(c.sql);
           logs.push(`Added missing column '${c.column}' to table '${c.table}'`);
+        }
+      }
+    }
+
+    // 3. Modify description column types to TEXT to support long Sinhala / detailed descriptions
+    const alterTables = ["class_list", "class_material_list", "studypack_list", "studypack_material_list"];
+    const colMap: Record<string, string> = {
+      class_list: "class_description",
+      class_material_list: "material_description",
+      studypack_list: "studypack_description",
+      studypack_material_list: "material_description"
+    };
+
+    for (const tbl of alterTables) {
+      if (await tableExists(pool, tbl)) {
+        const col = colMap[tbl];
+        if (await columnExists(pool, tbl, col)) {
+          try {
+            await pool.query(`ALTER TABLE \`${tbl}\` MODIFY COLUMN \`${col}\` TEXT DEFAULT NULL`);
+            logs.push(`Updated column type of '${tbl}.${col}' to TEXT`);
+          } catch (e: any) {
+            console.error(`[DB HEALER] Failed modifying ${tbl}.${col} type:`, e.message);
+          }
         }
       }
     }

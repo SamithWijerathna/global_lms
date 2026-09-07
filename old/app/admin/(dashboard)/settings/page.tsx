@@ -121,6 +121,22 @@ function SettingsContent() {
     is_active: true,
   });
 
+  // Bank Account Customizer states
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [bankAccountsLoading, setBankAccountsLoading] = useState(false);
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [editingBank, setEditingBank] = useState<any>(null);
+  const [bankForm, setBankForm] = useState({
+    bank_name: "",
+    account_name: "",
+    account_number: "",
+    branch_name: "",
+    account_type: "",
+    instructions: "",
+    is_active: true,
+    display_order: 0,
+  });
+
   const userRole = user?.role?.toLowerCase() || "";
   const isSuperOrHigher = ["superuser", "developer", "admin"].includes(userRole);
   const isDeveloper = ["developer", "superuser", "admin"].includes(userRole);
@@ -222,12 +238,34 @@ function SettingsContent() {
     }
   }, [selected, isAuthenticated, isSuperOrHigher]);
 
+  // Fetch bank accounts for Bank Management tab
+  const fetchBankAccounts = async () => {
+    setBankAccountsLoading(true);
+    try {
+      const res = await fetch("/api/bank-accounts?all=true");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setBankAccounts(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch bank accounts:", err);
+    } finally {
+      setBankAccountsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selected === "bankaccounts" && isAuthenticated && isSuperOrHigher) {
+      fetchBankAccounts();
+    }
+  }, [selected, isAuthenticated, isSuperOrHigher]);
+
   // Block protected tabs if no permission
   useEffect(() => {
     if (
       !loading &&
       !isSuperOrHigher &&
-      (selected === "usermanagement" || selected === "batchmanagement" || selected === "classtypemanagement")
+      (selected === "usermanagement" || selected === "batchmanagement" || selected === "classtypemanagement" || selected === "bankaccounts")
     ) {
       setSelected("profile");
     }
@@ -454,6 +492,82 @@ function SettingsContent() {
     }
   };
 
+  // Bank Account modal functions
+  const openBankModal = (b?: any) => {
+    if (b) {
+      setEditingBank(b);
+      setBankForm({
+        bank_name: b.bank_name || "",
+        account_name: b.account_name || "",
+        account_number: b.account_number || "",
+        branch_name: b.branch_name || "",
+        account_type: b.account_type || "",
+        instructions: b.instructions || "",
+        is_active: b.is_active === 1 || b.is_active === true,
+        display_order: b.display_order || 0,
+      });
+    } else {
+      setEditingBank(null);
+      setBankForm({
+        bank_name: "",
+        account_name: "",
+        account_number: "",
+        branch_name: "",
+        account_type: "",
+        instructions: "",
+        is_active: true,
+        display_order: 0,
+      });
+    }
+    setBankModalOpen(true);
+  };
+
+  const handleSaveBank = async () => {
+    if (!bankForm.bank_name || !bankForm.account_name || !bankForm.account_number) {
+      alert("Bank Name, Account Name, and Account Number are required");
+      return;
+    }
+
+    const payload = {
+      ...(editingBank ? { id: editingBank.id, uuid: editingBank.uuid } : {}),
+      bank_name: bankForm.bank_name,
+      account_name: bankForm.account_name,
+      account_number: bankForm.account_number,
+      branch_name: bankForm.branch_name,
+      account_type: bankForm.account_type,
+      instructions: bankForm.instructions,
+      is_active: bankForm.is_active ? 1 : 0,
+      display_order: bankForm.display_order,
+    };
+
+    const method = editingBank ? "PUT" : "POST";
+    const res = await fetch("/api/bank-accounts", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      await fetchBankAccounts();
+      setBankModalOpen(false);
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to save bank account");
+    }
+  };
+
+  const handleDeleteBank = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this bank account?")) return;
+
+    const res = await fetch(`/api/bank-accounts?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      await fetchBankAccounts();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to delete bank account");
+    }
+  };
+
   if (loading) return <div className="p-8">Loading...</div>;
   if (!isAuthenticated || !user) return <div className="p-8">Not authenticated</div>;
 
@@ -657,6 +771,59 @@ function SettingsContent() {
         )}
 
         {isSuperOrHigher && (
+          <Tab key="bankaccounts" title="Bank Accounts">
+            <Card>
+              <CardHeader className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Bank Account Management</h2>
+                  <p className="text-sm text-default-500">Add, update, or remove dynamic bank accounts for bank transfer payments</p>
+                </div>
+                <Button color="primary" onPress={() => openBankModal()}>Add New Bank Account</Button>
+              </CardHeader>
+              <CardBody>
+                <div className="overflow-x-auto w-full">
+                  <Table aria-label="Bank accounts table" isStriped>
+                    <TableHeader>
+                      <TableColumn>BANK NAME</TableColumn>
+                      <TableColumn>ACCOUNT NAME</TableColumn>
+                      <TableColumn>ACCOUNT NUMBER</TableColumn>
+                      <TableColumn>BRANCH</TableColumn>
+                      <TableColumn>STATUS</TableColumn>
+                      <TableColumn>ORDER</TableColumn>
+                      <TableColumn>ACTIONS</TableColumn>
+                    </TableHeader>
+                    <TableBody isLoading={bankAccountsLoading} emptyContent="No bank accounts found">
+                      {bankAccounts.map((b: any) => (
+                        <TableRow key={b.id || b.uuid}>
+                          <TableCell className="font-semibold text-primary">{b.bank_name}</TableCell>
+                          <TableCell>{b.account_name}</TableCell>
+                          <TableCell className="font-mono">{b.account_number}</TableCell>
+                          <TableCell>{b.branch_name || "—"}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${b.is_active ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
+                              {b.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </TableCell>
+                          <TableCell>{b.display_order ?? 0}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" onPress={() => openBankModal(b)}>Edit</Button>
+                              <Button size="sm" color="danger" onPress={() => handleDeleteBank(b.id)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardBody>
+            </Card>
+          </Tab>
+        )}
+
+        {isSuperOrHigher && (
           <Tab key="usermanagement" title="User Management">
             <Card>
               <CardHeader className="flex justify-between items-center">
@@ -839,6 +1006,65 @@ function SettingsContent() {
               <ModalFooter>
                 <Button variant="flat" onPress={onClose}>Cancel</Button>
                 <Button color="primary" onPress={handleSaveClassType}>Save Class Type</Button>
+              </ModalFooter>
+      {/* Bank Account Modal */}
+      <Modal isOpen={bankModalOpen} onOpenChange={setBankModalOpen}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>{editingBank ? "Edit Bank Account" : "Add New Bank Account"}</ModalHeader>
+              <ModalBody className="space-y-4">
+                <Input
+                  label="Bank Name *"
+                  placeholder="e.g. Commercial Bank, HNB, Sampath"
+                  value={bankForm.bank_name}
+                  onValueChange={(v) => setBankForm({ ...bankForm, bank_name: v })}
+                  isRequired
+                />
+                <Input
+                  label="Account Name *"
+                  placeholder="e.g. R A S T Rajapaksha"
+                  value={bankForm.account_name}
+                  onValueChange={(v) => setBankForm({ ...bankForm, account_name: v })}
+                  isRequired
+                />
+                <Input
+                  label="Account Number *"
+                  placeholder="e.g. 802 092 806 9"
+                  value={bankForm.account_number}
+                  onValueChange={(v) => setBankForm({ ...bankForm, account_number: v })}
+                  isRequired
+                />
+                <Input
+                  label="Branch Name"
+                  placeholder="e.g. Pilimathalawa"
+                  value={bankForm.branch_name}
+                  onValueChange={(v) => setBankForm({ ...bankForm, branch_name: v })}
+                />
+                <Input
+                  label="Instructions / Note"
+                  placeholder="e.g. Include student reference number in transfer note"
+                  value={bankForm.instructions}
+                  onValueChange={(v) => setBankForm({ ...bankForm, instructions: v })}
+                />
+                <Input
+                  type="number"
+                  label="Display Order"
+                  placeholder="0"
+                  value={bankForm.display_order.toString()}
+                  onValueChange={(v) => setBankForm({ ...bankForm, display_order: parseInt(v) || 0 })}
+                />
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-sm font-medium">Account Active</span>
+                  <Switch
+                    isSelected={bankForm.is_active}
+                    onValueChange={(v) => setBankForm({ ...bankForm, is_active: v })}
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="flat" onPress={onClose}>Cancel</Button>
+                <Button color="primary" onPress={handleSaveBank}>Save Bank Account</Button>
               </ModalFooter>
             </>
           )}
