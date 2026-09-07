@@ -1007,6 +1007,11 @@ function SettingsContent() {
                 <Button variant="flat" onPress={onClose}>Cancel</Button>
                 <Button color="primary" onPress={handleSaveClassType}>Save Class Type</Button>
               </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
       {/* Bank Account Modal */}
       <Modal isOpen={bankModalOpen} onOpenChange={setBankModalOpen}>
         <ModalContent>

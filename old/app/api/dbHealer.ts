@@ -140,7 +140,7 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
           create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
-      }
+      },
       {
         name: "bank_accounts",
         sql: `CREATE TABLE IF NOT EXISTS bank_accounts (
