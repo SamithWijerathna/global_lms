@@ -13,10 +13,12 @@ import { Tabs, Tab } from "@heroui/tabs";
 import { RadioGroup, Radio } from "@heroui/radio";
 import { Chip } from "@heroui/chip";
 import { Upload, CheckCircle, Banknote, Building2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/lib/useAuth";
 import BankTransferSection from "@/components/BankTransferSection";
 
 export default function LessonStorePage() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,10 +97,9 @@ export default function LessonStorePage() {
           return;
         }
 
-        // Include pending classes but exclude approved ones
+        // Include all classes for the user's batch (purchased/approved, pending, and available)
         const filteredClasses = normalized.filter((cls: any) => {
-          const classId = cls.class_id || cls.id;
-          return cls.batch === user.batch && !approvedIds.includes(classId);
+          return cls.batch === user.batch;
         });
 
         if (filteredClasses.length === 0) {
@@ -261,12 +262,13 @@ export default function LessonStorePage() {
           {classes.map((cls: any) => {
             const classId = cls.class_id || cls.id;
             const isPending = pendingClassIds.includes(classId);
+            const isApproved = approvedClassIds.includes(classId);
 
             return (
               <Card
                 key={classId}
                 className={`relative w-full h-[400px] overflow-hidden shadow-xl transition-transform ${
-                  !isPending ? "hover:scale-[1.02]" : ""
+                  !isPending && !isApproved ? "hover:scale-[1.02]" : ""
                 } ${isPending ? "opacity-75" : ""}`}
               >
                 {cls.class_imageurl || cls.image_url ? (
@@ -283,6 +285,21 @@ export default function LessonStorePage() {
                 )}
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10" />
+
+                {/* Purchased / Enrolled badge */}
+                {isApproved && (
+                  <div className="absolute top-3 right-3 z-30">
+                    <Chip
+                      color="success"
+                      size="sm"
+                      variant="shadow"
+                      className="text-white font-semibold"
+                      startContent={<CheckCircle className="w-3.5 h-3.5" />}
+                    >
+                      Purchased
+                    </Chip>
+                  </div>
+                )}
 
                 {/* Pending overlay */}
                 {isPending && (
@@ -312,15 +329,30 @@ export default function LessonStorePage() {
                           {cls.class_description || "No description available"}
                         </p>
                       </div>
-                      <Button
-                        color={isPending ? "default" : "primary"}
-                        radius="full"
-                        size="sm"
-                        isDisabled={isPending}
-                        onPress={() => enrollInClass(cls)}
-                      >
-                        {isPending ? "Pending Approval" : "Enroll Now"}
-                      </Button>
+                      {isApproved ? (
+                        <Button
+                          color="success"
+                          radius="full"
+                          size="sm"
+                          className="text-white font-semibold"
+                          onPress={() => router.push("/myClasses")}
+                        >
+                          Go to Class
+                        </Button>
+                      ) : isPending ? (
+                        <Button color="default" radius="full" size="sm" isDisabled>
+                          Pending Approval
+                        </Button>
+                      ) : (
+                        <Button
+                          color="primary"
+                          radius="full"
+                          size="sm"
+                          onPress={() => enrollInClass(cls)}
+                        >
+                          Enroll Now
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardFooter>
