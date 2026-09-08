@@ -4,6 +4,16 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 export async function GET(req: Request) {
+  const defaultSettings: Record<string, string> = {
+    site_title: "GLOBAL LMS",
+    site_short_name: "GLOBAL LMS",
+    site_logo_url: "/assets/logo.png",
+    site_favicon_url: "/favicon.ico",
+    copyright_text: "© 2026 Global LMS. All rights reserved.",
+    contact_email: "support@circleone.asia",
+    contact_phone: "+94 77 123 4567",
+  };
+
   try {
     const { searchParams } = new URL(req.url);
     const key = searchParams.get("key");
@@ -18,19 +28,11 @@ export async function GET(req: Request) {
       if (rows && rows.length > 0) {
         return NextResponse.json({ key: rows[0].setting_key, value: rows[0].setting_value });
       }
-      return NextResponse.json({ key, value: null }, { status: 404 });
+      return NextResponse.json({ key, value: defaultSettings[key] || null });
     }
 
     const [rows]: any = await db.query("SELECT setting_key, setting_value FROM system_settings");
-    const settings: Record<string, string> = {
-      site_title: "LASHINIGEO LMS",
-      site_short_name: "LASHINIGEO",
-      site_logo_url: "/assets/logo.png",
-      site_favicon_url: "/favicon.ico",
-      copyright_text: "© 2026 Lashinigeo LMS. All rights reserved.",
-      contact_email: "support@lashinigeo.lk",
-      contact_phone: "+94 77 123 4567",
-    };
+    const settings = { ...defaultSettings };
 
     if (Array.isArray(rows)) {
       rows.forEach((r: any) => {
@@ -42,8 +44,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json(settings);
   } catch (error) {
-    console.error("Error fetching settings:", error);
-    return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
+    console.warn("Could not load settings from database, using defaults:", error);
+    return NextResponse.json(defaultSettings);
   }
 }
 
