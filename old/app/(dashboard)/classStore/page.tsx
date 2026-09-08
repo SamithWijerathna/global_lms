@@ -442,7 +442,7 @@ export default function LessonStorePage() {
 
                     {/* Description */}
                     <div>
-                      <h4 className="text-sm font-semibold text-default-700 mb-2">Description & Syllabus</h4>
+                      <h4 className="text-sm font-semibold text-foreground/90 mb-2">Description & Syllabus</h4>
                       <div className="p-4 rounded-xl bg-default-50 dark:bg-default-50/5 border border-default-200/40 max-h-60 overflow-y-auto">
                         <RichTextRenderer content={selectedDetailsClass.class_description} />
                       </div>

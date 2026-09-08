@@ -9,7 +9,7 @@ interface RichTextRendererProps {
 
 export default function RichTextRenderer({ content, className = "" }: RichTextRendererProps) {
   if (!content || !content.trim()) {
-    return <p className="text-default-400 italic text-xs">No description provided.</p>;
+    return <p className="text-foreground/50 italic text-xs">No description provided.</p>;
   }
 
   // Parse lines and apply formatting
@@ -83,7 +83,7 @@ export default function RichTextRenderer({ content, className = "" }: RichTextRe
   };
 
   return (
-    <div className={`space-y-1.5 text-xs md:text-sm text-default-700 dark:text-default-300 leading-relaxed ${className}`}>
+    <div className={`space-y-1.5 text-xs md:text-sm text-foreground/90 leading-relaxed ${className}`}>
       {lines.map((line, index) => {
         const trimmed = line.trim();
 
