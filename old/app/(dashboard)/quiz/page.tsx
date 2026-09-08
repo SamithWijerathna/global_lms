@@ -346,8 +346,8 @@ export default function StudentQuickQuizPage() {
       const incorrectCount = questionResults.length - correctCount;
 
       return (
-        <div className="container mx-auto px-4 py-8 min-h-screen">
-          <GlassSurface width="100%" height="auto" className="max-w-5xl mx-auto">
+        <div className="w-full space-y-6 pb-12">
+          <GlassSurface width="100%" height="auto" className="w-full">
             <div className="flex flex-col items-center justify-center text-center p-8">
               {isPassed ? (
                 <Trophy className="h-24 w-24 text-success mb-6 animate-bounce" />

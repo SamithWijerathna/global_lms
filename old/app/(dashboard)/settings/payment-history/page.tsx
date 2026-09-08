@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/src/lib/useAuth";
 import { Pagination } from "@heroui/react";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
 
 interface Payment {
   id: number;
@@ -56,6 +57,9 @@ export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 8;
+
+  const [selectedProof, setSelectedProof] = useState<{ url: string; title: string } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const userUuid = user?.uuid;
@@ -137,14 +141,19 @@ export default function PaymentsPage() {
   const renderCell = (item: any, columnKey: string) => {
     if (columnKey === "proof") {
       return item.proof ? (
-        <a
-          href={`/${item.proof}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline hover:opacity-80 font-medium"
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedProof({
+              url: `/${item.proof}`,
+              title: `${item.item_type.toUpperCase()} (${item.item_id}) - ${formatAmount(item.amount)} LKR`,
+            });
+            setIsModalOpen(true);
+          }}
+          className="text-primary underline hover:opacity-80 font-medium cursor-pointer"
         >
           View
-        </a>
+        </button>
       ) : (
         <span className="text-muted-foreground">No proof</span>
       );
@@ -260,6 +269,71 @@ export default function PaymentsPage() {
           )}
         </>
       )}
+
+      {/* Transaction Proof Preview Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        size="3xl"
+        scrollBehavior="inside"
+        backdrop="blur"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 border-b border-border">
+                <h3 className="text-lg font-bold text-foreground">Transaction Proof</h3>
+                {selectedProof?.title && (
+                  <p className="text-xs text-muted-foreground font-normal">{selectedProof.title}</p>
+                )}
+              </ModalHeader>
+              <ModalBody className="p-6 flex flex-col items-center justify-center min-h-[300px]">
+                {selectedProof?.url ? (
+                  selectedProof.url.toLowerCase().endsWith(".pdf") ? (
+                    <iframe
+                      src={selectedProof.url}
+                      className="w-full h-[70vh] rounded-lg border border-border bg-white"
+                      title="Transaction Proof PDF"
+                    />
+                  ) : (
+                    <img
+                      src={selectedProof.url}
+                      alt="Transaction Proof"
+                      className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg shadow-md border border-border"
+                      onError={(e: any) => {
+                        e.target.src = "/placeholder.jpg";
+                      }}
+                    />
+                  )
+                ) : (
+                  <p className="text-sm text-muted-foreground">No proof preview available.</p>
+                )}
+              </ModalBody>
+              <ModalFooter className="border-t border-border flex justify-between items-center">
+                {selectedProof?.url ? (
+                  <a
+                    href={selectedProof.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    Open in new tab ↗
+                  </a>
+                ) : (
+                  <div />
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm font-medium rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

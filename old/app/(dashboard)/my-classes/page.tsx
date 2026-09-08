@@ -246,9 +246,8 @@ function MaterialViewer({
   }
 
   return (
-    <div className="min-h-screen pb-16">
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <Button
+    <div className="w-full space-y-6 pb-12">
+      <Button
           variant="light"
           onPress={onBack}
           className="mb-6 font-medium text-default-600 hover:text-primary transition"
@@ -423,7 +422,6 @@ function MaterialViewer({
             animation: watermark-roam 60s ease-in-out infinite;
           }
         `}</style>
-      </div>
     </div>
   );
 }

@@ -3,9 +3,17 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../../src/lib/useAuth";
 
-const inputClass = "w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
-const labelClass = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2";
-const disabledInputClass = "w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed";
+const inputClass =
+  "flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-xs";
+
+const labelClass =
+  "block text-sm font-medium text-foreground mb-2";
+
+const disabledInputClass =
+  "flex h-10 w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground cursor-not-allowed opacity-70 shadow-xs";
+
+const textareaClass =
+  "flex min-h-[100px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-colors shadow-xs";
 
 export default function EditProfilePage() {
   const { user, loading } = useAuth();
@@ -56,7 +64,7 @@ export default function EditProfilePage() {
     }
   }, [user]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -112,7 +120,6 @@ export default function EditProfilePage() {
 
       if (res.ok) {
         setSuccessMessage("Profile updated successfully!");
-        // Keep preview if a new image was uploaded (it will show until page reload)
       } else {
         setErrorMessage(data.error || "Update failed. Please try again.");
       }
@@ -124,35 +131,66 @@ export default function EditProfilePage() {
     setSaving(false);
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
-  if (!user) return <div className="p-8 text-center text-red-500">Not logged in</div>;
+  if (loading) {
+    return (
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Edit Profile
+        </h1>
+        <div className="w-full h-80 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const profileImageUrl = preview || user.profile_url || "https://via.placeholder.com/128?text=No+Image";
+  if (!user) {
+    return (
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Edit Profile
+        </h1>
+        <div className="w-full h-80 flex items-center justify-center">
+          <p className="text-sm text-rose-500 font-medium">Not logged in</p>
+        </div>
+      </div>
+    );
+  }
+
+  const profileImageUrl = preview || user.profile_url || "https://via.placeholder.com/128?text=Profile";
 
   return (
     <div className="w-full space-y-6 pb-12">
       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
         Edit Profile
       </h1>
-      <div className="p-6 bg-card text-card-foreground border border-border rounded-xl shadow">
 
-      {/* Profile Picture */}
-      <div className="flex flex-col items-start mb-10">
+      {/* Profile Picture Header Area */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-border">
         <img
           src={profileImageUrl}
           alt="Profile"
-          className="w-32 h-32 rounded-full object-cover border-4 border-gray-300 dark:border-gray-600 shadow-lg"
+          className="w-24 h-24 rounded-full object-cover border border-border shadow-sm bg-muted"
         />
-        {preview && <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">New image preview</p>}
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
-          onChange={handleFileChange}
-          className="mt-4 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
-        />
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Profile Photo
+          </label>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={handleFileChange}
+            className="block text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+          />
+          {preview && (
+            <p className="text-xs text-muted-foreground font-medium">
+              New image selected (click Update Profile to save)
+            </p>
+          )}
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
         {/* Student ID (read-only) */}
         <div>
           <label className={labelClass}>Student ID</label>
@@ -240,7 +278,6 @@ export default function EditProfilePage() {
                 {b.batch_name || b.batch_code}
               </option>
             ))}
-
           </select>
         </div>
 
@@ -263,36 +300,39 @@ export default function EditProfilePage() {
             name="user_address"
             value={form.user_address}
             onChange={handleChange}
-            rows={4}
-            className={`${inputClass} resize-none`}
+            rows={3}
+            className={textareaClass}
             placeholder="Full address..."
           />
         </div>
 
-        {/* Submit Button (full width) */}
-        <div className="md:col-span-2 flex justify-end">
+        {/* Status Messages */}
+        {(successMessage || errorMessage) && (
+          <div className="md:col-span-2">
+            {successMessage && (
+              <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 p-3.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                {successMessage}
+              </div>
+            )}
+            {errorMessage && (
+              <div className="text-sm font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 p-3.5 rounded-lg border border-rose-200 dark:border-rose-800">
+                {errorMessage}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Submit Button (full width on mobile, auto on desktop) */}
+        <div className="md:col-span-2 flex justify-start pt-2">
           <button
             type="submit"
             disabled={saving}
-            className="w-full sm:w-56 py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold disabled:opacity-70 disabled:cursor-not-allowed transition"
+            className="w-full sm:w-auto px-6 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm rounded-md shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "Saving..." : "Update Profile"}
           </button>
         </div>
       </form>
-
-      {/* Messages */}
-      {successMessage && (
-        <div className="text-center mt-6 text-green-600 dark:text-green-400 font-medium">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="text-center mt-6 text-red-600 dark:text-red-400 font-medium">
-          {errorMessage}
-        </div>
-      )}
-      </div>
     </div>
   );
 }
