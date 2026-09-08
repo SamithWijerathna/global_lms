@@ -17,7 +17,7 @@ export const config = {
 export default function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get("host") || "";
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "globallms.com";
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "lms.circleone.asia";
 
   // Clean host (remove port if local)
   const currentHost = hostname.replace(/:\d+$/, "").toLowerCase();

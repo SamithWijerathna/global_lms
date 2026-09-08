@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody } from "@heroui/card";
@@ -219,13 +219,13 @@ export function DomainSettingsTab() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-3 bg-background rounded-lg border border-default-200">
                 <span className="font-bold text-foreground block mb-1">Option 1: CNAME Record (Recommended)</span>
-                <p className="text-default-500 mb-2">Point your subdomain to our Global LMS cluster:</p>
+                <p className="text-default-500 mb-2">Point your subdomain to our LMS cluster:</p>
                 <div className="flex items-center justify-between bg-default-100 p-2 rounded font-mono">
-                  <span>cname.globallms.com</span>
+                  <span>cname.lms.circleone.asia</span>
                   <Button
                     size="sm"
                     variant="light"
-                    onPress={() => copyToClipboard("cname.globallms.com", "cname")}
+                    onPress={() => copyToClipboard("cname.lms.circleone.asia", "cname")}
                   >
                     {copiedField === "cname" ? "✓ Copied" : "Copy"}
                   </Button>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody } from "@heroui/card";
@@ -214,11 +214,11 @@ export default function SaaSAdminPage() {
         </Card>
         <Card className="p-4 border border-default-200">
           <p className="text-sm text-default-500">Global LMS Root Domain</p>
-          <h3 className="text-xl font-bold mt-2 font-mono">globallms.com</h3>
+          <h3 className="text-xl font-bold mt-2 font-mono">lms.circleone.asia</h3>
         </Card>
         <Card className="p-4 border border-default-200">
           <p className="text-sm text-default-500">Default CNAME Ingestion Target</p>
-          <h3 className="text-xl font-bold mt-2 font-mono text-success">cname.globallms.com</h3>
+          <h3 className="text-xl font-bold mt-2 font-mono text-success">cname.lms.circleone.asia</h3>
         </Card>
       </div>
 
@@ -247,7 +247,7 @@ export default function SaaSAdminPage() {
                   <TableCell className="font-semibold">{t.name}</TableCell>
                   <TableCell>
                     <code className="text-xs bg-default-100 px-2 py-1 rounded text-primary">
-                      {t.slug}.globallms.com
+                      {t.slug}.lms.circleone.asia
                     </code>
                   </TableCell>
                   <TableCell>
