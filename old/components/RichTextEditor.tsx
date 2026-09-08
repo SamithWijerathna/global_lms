@@ -11,7 +11,6 @@ import {
   Heading1,
   Heading2,
   Heading3,
-  Sparkles,
   Eye,
   Edit3,
   CornerDownLeft,
@@ -25,11 +24,6 @@ interface RichTextEditorProps {
   placeholder?: string;
   className?: string;
 }
-
-const EMOJI_PRESETS = [
-  "🌀", "👇", "👉", "📌", "⚡", "✅", "🎯", "⭐", 
-  "📚", "💡", "🔥", "🎓", "📝", "🏆", "✨", "🔍"
-];
 
 export default function RichTextEditor({
   label = "Description",
@@ -65,10 +59,6 @@ export default function RichTextEditor({
     }, 50);
   };
 
-  // Insert emoji at cursor
-  const insertEmoji = (emoji: string) => {
-    insertFormat(` ${emoji} `);
-  };
 
   // Format line prefix (e.g. Bullet list or Heading)
   const formatLinePrefix = (prefix: string) => {
@@ -213,24 +203,6 @@ export default function RichTextEditor({
             >
               <CornerDownLeft className="w-3.5 h-3.5" />
             </button>
-          </div>
-
-          {/* Quick Emoji Bar */}
-          <div className="flex items-center gap-1 px-3 py-1.5 bg-default-50/50 dark:bg-default-50/5 border-b border-default-200/40 overflow-x-auto text-xs">
-            <span className="text-[10px] uppercase font-bold text-default-400 shrink-0 mr-1 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-warning" /> Icons:
-            </span>
-            {EMOJI_PRESETS.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => insertEmoji(emoji)}
-                className="px-1.5 py-0.5 hover:bg-default-200 dark:hover:bg-default-100/20 rounded transition-transform active:scale-95 text-base shrink-0"
-                title={`Insert ${emoji}`}
-              >
-                {emoji}
-              </button>
-            ))}
           </div>
 
           {/* Text Area Input */}
