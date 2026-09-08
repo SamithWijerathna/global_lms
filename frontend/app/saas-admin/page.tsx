@@ -22,6 +22,8 @@ import {
   ModalFooter,
 } from "@heroui/modal";
 
+import { getBackendApiUrl } from "@/src/lib/apiConfig";
+
 interface TenantItem {
   id: string;
   name: string;
@@ -67,9 +69,10 @@ export default function SaaSAdminPage() {
 
   const fetchTenants = async (authToken: string) => {
     setLoadingTenants(true);
+    const apiUrl = getBackendApiUrl();
     try {
-      const res = await fetch("http://localhost:5000/api/v1/saas-admin/tenants", {
-        headers: { Authorization: Bearer  },
+      const res = await fetch(`${apiUrl}/api/v1/saas-admin/tenants`, {
+        headers: { Authorization: `Bearer ${authToken}` },
       });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
@@ -86,8 +89,9 @@ export default function SaaSAdminPage() {
     if (e) e.preventDefault();
     setLoginLoading(true);
     setLoginError("");
+    const apiUrl = getBackendApiUrl();
     try {
-      const res = await fetch("http://localhost:5000/api/v1/saas-admin/login", {
+      const res = await fetch(`${apiUrl}/api/v1/saas-admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: adminEmail, password: adminPassword }),
@@ -114,12 +118,13 @@ export default function SaaSAdminPage() {
     }
 
     setCreating(true);
+    const apiUrl = getBackendApiUrl();
     try {
-      const res = await fetch("http://localhost:5000/api/v1/saas-admin/tenants", {
+      const res = await fetch(`${apiUrl}/api/v1/saas-admin/tenants`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: Bearer ,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });

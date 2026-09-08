@@ -27,6 +27,8 @@ interface DomainRecord {
   createdAt: string;
 }
 
+import { getBackendApiUrl } from "@/src/lib/apiConfig";
+
 export function DomainSettingsTab() {
   const [domains, setDomains] = useState<DomainRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,11 +40,12 @@ export function DomainSettingsTab() {
 
   const fetchDomains = async () => {
     setLoading(true);
+    const apiUrl = getBackendApiUrl();
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch("http://localhost:5000/api/v1/domains", {
+      const res = await fetch(`${apiUrl}/api/v1/domains`, {
         headers: {
-          Authorization: Bearer ,
+          Authorization: `Bearer ${token}`,
           "x-tenant-slug": "oxford", // fallback context for demo
         },
       });
@@ -67,13 +70,14 @@ export function DomainSettingsTab() {
 
     setAdding(true);
     setVerificationFeedback(null);
+    const apiUrl = getBackendApiUrl();
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch("http://localhost:5000/api/v1/domains", {
+      const res = await fetch(`${apiUrl}/api/v1/domains`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: Bearer ,
+          Authorization: `Bearer ${token}`,
           "x-tenant-slug": "oxford",
         },
         body: JSON.stringify({ domain: newDomain.trim() }),
@@ -95,9 +99,10 @@ export function DomainSettingsTab() {
   const handleVerifyDomain = async (domain: DomainRecord) => {
     setVerifyingId(domain.id);
     setVerificationFeedback(null);
+    const apiUrl = getBackendApiUrl();
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`http://localhost:5000/api/v1/domains/${domain.id}/verify`, {
+      const res = await fetch(`${apiUrl}/api/v1/domains/${domain.id}/verify`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -131,9 +136,10 @@ export function DomainSettingsTab() {
   };
 
   const handleSetPrimary = async (domainId: string) => {
+    const apiUrl = getBackendApiUrl();
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`http://localhost:5000/api/v1/domains/${domainId}/primary`, {
+      const res = await fetch(`${apiUrl}/api/v1/domains/${domainId}/primary`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -153,9 +159,10 @@ export function DomainSettingsTab() {
 
   const handleDeleteDomain = async (domainId: string) => {
     if (!confirm("Are you sure you want to remove this custom domain?")) return;
+    const apiUrl = getBackendApiUrl();
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`http://localhost:5000/api/v1/domains/${domainId}`, {
+      const res = await fetch(`${apiUrl}/api/v1/domains/${domainId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
