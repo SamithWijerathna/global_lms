@@ -52,8 +52,16 @@ export default function PaymentApprovalPage() {
         const studentsData = studentsRes.ok ? await studentsRes.json() : [];
         const studentMap = new Map<string, string>();
         studentsData.forEach((s: any) => {
-          const name = `${s.first_name || ""} ${s.last_name || ""}`.trim() || s.full_name || s.name || "Unknown Student";
-          studentMap.set(s.student_uuid || s.uuid || s.id, name);
+          const fullName = `${s.first_name || ""} ${s.last_name || ""}`.trim();
+          const displayName = fullName
+            ? (s.student_id ? `${fullName} (${s.student_id})` : fullName)
+            : (s.user_email || s.student_id || s.full_name || s.name || "Unknown Student");
+
+          const normalize = (v: any) => String(v).trim().toUpperCase();
+          if (s.uuid) studentMap.set(normalize(s.uuid), displayName);
+          if (s.student_uuid) studentMap.set(normalize(s.student_uuid), displayName);
+          if (s.id) studentMap.set(normalize(s.id), displayName);
+          if (s.student_id) studentMap.set(normalize(s.student_id), displayName);
         });
 
         // Fetch classes (requires auth)
@@ -63,16 +71,29 @@ export default function PaymentApprovalPage() {
         const classesData = classesRes.ok ? await classesRes.json() : [];
         const classMap = new Map<string, string>();
         classesData.forEach((c: any) => {
-          classMap.set(c.class_id || c.id, c.class_title || "Unknown Class");
+          const normalize = (v: any) => String(v).trim().toUpperCase();
+          classMap.set(normalize(c.class_id || c.id), c.class_title || "Unknown Class");
         });
 
         // Enrich payments
-        const enrichedPayments = paymentsData.map((p: any) => ({
-          ...p,
-          student_name: studentMap.get(p.student_uuid) || "Unknown Student",
-          class_title: classMap.get(p.item_id) || "Unknown Class",
-          receipt_url: p.transaction_proof || null,
-        }));
+        const enrichedPayments = paymentsData.map((p: any) => {
+          const normalize = (v: any) => String(v).trim().toUpperCase();
+          const studentKey = normalize(p.student_uuid || p.student_id || "");
+          const classKey = normalize(p.item_id || p.class_id || "");
+
+          const mappedStudent = studentMap.get(studentKey);
+          const dbStudent = p.student_name && p.student_name !== "Unknown Student" ? p.student_name : null;
+
+          const mappedClass = classMap.get(classKey);
+          const dbClass = p.class_title && !p.class_title.startsWith("Unknown Class") ? p.class_title : null;
+
+          return {
+            ...p,
+            student_name: mappedStudent || dbStudent || p.user_email || "Unknown Student",
+            class_title: dbClass || mappedClass || `Unknown Class (${p.item_id || p.class_id})`,
+            receipt_url: p.transaction_proof || p.receipt_url || null,
+          };
+        });
 
         setStudentsMap(studentMap);
         setClassesMap(classMap);

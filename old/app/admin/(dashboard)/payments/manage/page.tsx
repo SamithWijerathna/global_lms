@@ -64,10 +64,15 @@ export default function PaymentsManagementPage() {
       const studentsData = await studentsRes.json();
       const studentsMap = new Map<string, string>();
       studentsData.forEach((s: any) => {
-        studentsMap.set(
-          normalize(s.student_uuid || s.uuid || s.id),
-          s.full_name || s.name || "Unknown Student"
-        );
+        const fullName = `${s.first_name || ""} ${s.last_name || ""}`.trim();
+        const displayName = fullName
+          ? (s.student_id ? `${fullName} (${s.student_id})` : fullName)
+          : (s.user_email || s.student_id || s.full_name || s.name || "Unknown Student");
+
+        if (s.uuid) studentsMap.set(normalize(s.uuid), displayName);
+        if (s.student_uuid) studentsMap.set(normalize(s.student_uuid), displayName);
+        if (s.id) studentsMap.set(normalize(s.id), displayName);
+        if (s.student_id) studentsMap.set(normalize(s.student_id), displayName);
       });
       setStudents(studentsMap);
 
@@ -82,18 +87,23 @@ export default function PaymentsManagementPage() {
         classesMap.set(normalize(c.class_id || c.id), c.class_title || "Unknown Class");
       });
       setClassesMap(classesMap);
-      console.log("Classes Map:", classesMap);
 
       // Enrich payments with student_name and class_title
       const enriched = paymentsData.map((p: any) => {
-        const studentKey = normalize(p.student_uuid || p.student_id);
-        const classKey = normalize(p.item_id || p.class_id);
+        const studentKey = normalize(p.student_uuid || p.student_id || "");
+        const classKey = normalize(p.item_id || p.class_id || "");
+
+        const mappedStudent = studentsMap.get(studentKey);
+        const dbStudent = p.student_name && p.student_name !== "Unknown Student" ? p.student_name : null;
+
+        const mappedClass = classesMap.get(classKey);
+        const dbClass = p.class_title && !p.class_title.startsWith("Unknown Class") ? p.class_title : null;
 
         return {
           ...p,
-          student_name: studentsMap.get(studentKey) || "Unknown Student",
-          class_title: classesMap.get(classKey) || `Unknown Class (${p.item_id || p.class_id})`,
-          receipt_url: p.transaction_proof || null,
+          student_name: mappedStudent || dbStudent || p.user_email || "Unknown Student",
+          class_title: dbClass || mappedClass || `Unknown Class (${p.item_id || p.class_id})`,
+          receipt_url: p.transaction_proof || p.receipt_url || null,
         };
       });
 
@@ -208,20 +218,26 @@ export default function PaymentsManagementPage() {
   );
   const totalPages = Math.ceil(filteredPayments.length / rowsPerPage);
 
-  const handleDelete = async (paymentId: number) => {
+  const handleDelete = async (paymentId: number, paymentUuid?: string) => {
     if (!confirm("Are you sure you want to delete this payment?")) return;
     try {
-      const res = await fetch(`/api/admin/payments?id=${paymentId}`, {
+      const res = await fetch(`/api/payment?id=${paymentId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: paymentId, payment_uuid: paymentUuid }),
       });
+      
       if (res.ok) {
-        const updatedPayments = payments.filter((p: any) => p.id !== paymentId);
+        const updatedPayments = payments.filter((p: any) => p.id !== paymentId && p.payment_uuid !== paymentUuid);
         setPayments(updatedPayments);
         calculateStats(updatedPayments);
-        // filteredPayments will be updated automatically via useEffect
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete payment");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert("Error deleting payment");
     }
   };
 
@@ -430,7 +446,7 @@ export default function PaymentsManagementPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Button size="sm" color="danger" variant="light" onPress={() => handleDelete(payment.id)}>
+                          <Button size="sm" color="danger" variant="light" onPress={() => handleDelete(payment.id, payment.payment_uuid)}>
                             Delete
                           </Button>
                         </TableCell>

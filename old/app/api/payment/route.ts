@@ -107,42 +107,76 @@ export async function POST(req: Request) {
 /*  GET – fetch ALL payments (used by the MonthlyPayments dashboard)    */
 /* --------------------------------------------------------------------- */
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const all = searchParams.get("all");
+  try {
+    const { searchParams } = new URL(req.url);
+    const all = searchParams.get("all");
 
-  const db = await getDBConnection();
+    const db = await getDBConnection();
 
-  if (all) {
-    const [rows] = await db.query(`
-      SELECT * 
-      FROM payments 
-      ORDER BY created_at DESC
-    `);
+    const baseQuery = `
+      SELECT 
+        p.*,
+        COALESCE(
+          NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
+          u.user_email,
+          u.student_id,
+          'Unknown Student'
+        ) AS student_name,
+        COALESCE(c.class_title, sp.studypack_title, 'Unknown Class') AS class_title
+      FROM payments p
+      LEFT JOIN users u ON (p.student_uuid = u.uuid OR p.student_uuid = u.student_id OR p.student_uuid = CAST(u.id AS CHAR))
+      LEFT JOIN class_list c ON p.item_type = 'class' AND (p.item_id = c.class_id OR p.item_id = CAST(c.id AS CHAR))
+      LEFT JOIN studypack_list sp ON p.item_type = 'studypack' AND (p.item_id = sp.studypack_id OR p.item_id = CAST(sp.id AS CHAR))
+    `;
+
+    if (all) {
+      const [rows] = await db.query(`${baseQuery} ORDER BY p.created_at DESC`);
+      return NextResponse.json({ payments: rows });
+    }
+
+    const [rows] = await db.query(`${baseQuery} WHERE p.status = 'pending' ORDER BY p.created_at DESC`);
     return NextResponse.json({ payments: rows });
+  } catch (error) {
+    console.error("Error fetching payments:", error);
+    return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
   }
-
-  // If no `all` param → you can keep the old pending-only behaviour
-  const [rows] = await db.query("SELECT * FROM payments WHERE status = ?", ["pending"]);
-  const payments = rows as any[];
-  return NextResponse.json({ payments });
 }
 
 /* --------------------------------------------------------------------- */
-/*  DELETE – permanently remove a payment (admin only)                 */
+/*  DELETE – permanently remove a payment (supports id & payment_uuid)   */
 /* --------------------------------------------------------------------- */
 export async function DELETE(req: Request) {
   try {
-    const body = await req.json();
-    const { payment_uuid } = body;
+    const url = new URL(req.url);
+    const queryId = url.searchParams.get("id");
+    const queryUuid = url.searchParams.get("payment_uuid");
 
-    if (!payment_uuid) {
-      return NextResponse.json({ error: "Missing payment_uuid" }, { status: 400 });
+    let payment_id: any = queryId;
+    let payment_uuid: any = queryUuid;
+
+    if (!payment_id && !payment_uuid) {
+      try {
+        const body = await req.json();
+        payment_id = body.id || body.payment_id;
+        payment_uuid = body.payment_uuid;
+      } catch (e) {
+        // body parsing failed or empty
+      }
+    }
+
+    if (!payment_id && !payment_uuid) {
+      return NextResponse.json({ error: "Missing payment ID or payment_uuid" }, { status: 400 });
     }
 
     const db = await getDBConnection();
-    await db.query("DELETE FROM payments WHERE payment_uuid = ?", [payment_uuid]);
 
-    return NextResponse.json({ success: true });
+    if (payment_id) {
+      await db.query("DELETE FROM payments WHERE id = ?", [payment_id]);
+    } else if (payment_uuid) {
+      await db.query("DELETE FROM payments WHERE payment_uuid = ?", [payment_uuid]);
+    }
+
+    return NextResponse.json({ success: true, message: "Payment deleted successfully" }, { status: 200 });
   } catch (error) {
     console.error("Error deleting payment:", error);
     return NextResponse.json({ error: "Failed to delete payment" }, { status: 500 });
