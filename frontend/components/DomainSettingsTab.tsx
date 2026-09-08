@@ -97,10 +97,10 @@ export function DomainSettingsTab() {
     setVerificationFeedback(null);
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(http://localhost:5000/api/v1/domains//verify, {
+      const res = await fetch(`http://localhost:5000/api/v1/domains/${domain.id}/verify`, {
         method: "POST",
         headers: {
-          Authorization: Bearer ,
+          Authorization: `Bearer ${token}`,
           "x-tenant-slug": "oxford",
         },
       });
@@ -133,10 +133,10 @@ export function DomainSettingsTab() {
   const handleSetPrimary = async (domainId: string) => {
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(http://localhost:5000/api/v1/domains//primary, {
+      const res = await fetch(`http://localhost:5000/api/v1/domains/${domainId}/primary`, {
         method: "PATCH",
         headers: {
-          Authorization: Bearer ,
+          Authorization: `Bearer ${token}`,
           "x-tenant-slug": "oxford",
         },
       });
@@ -155,10 +155,10 @@ export function DomainSettingsTab() {
     if (!confirm("Are you sure you want to remove this custom domain?")) return;
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(http://localhost:5000/api/v1/domains/, {
+      const res = await fetch(`http://localhost:5000/api/v1/domains/${domainId}`, {
         method: "DELETE",
         headers: {
-          Authorization: Bearer ,
+          Authorization: `Bearer ${token}`,
           "x-tenant-slug": "oxford",
         },
       });
@@ -246,7 +246,11 @@ export function DomainSettingsTab() {
           {/* Verification Feedback Banner */}
           {verificationFeedback && (
             <div
-              className={p-4 rounded-xl border text-sm }
+              className={`p-4 rounded-xl border text-sm ${
+                verificationFeedback.verified
+                  ? "bg-success/10 border-success/30 text-success"
+                  : "bg-warning/10 border-warning/30 text-warning"
+              }`}
             >
               <div className="font-semibold mb-1">
                 {verificationFeedback.verified ? "✅ Verification Succeeded" : "⏳ DNS Propagation In Progress"}

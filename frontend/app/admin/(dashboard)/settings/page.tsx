@@ -1086,6 +1086,8 @@ function SettingsContent() {
               </CardBody>
             </Card>
           </Tab>
+        )}
+
         {isSuperOrHigher && (
           <Tab key="domains" title="Custom Domain & CNAME">
             <DomainSettingsTab />
