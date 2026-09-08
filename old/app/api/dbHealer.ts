@@ -158,6 +158,14 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "system_settings",
+        sql: `CREATE TABLE IF NOT EXISTS system_settings (
+          setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
+          setting_value TEXT NOT NULL,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
       }
     ];
 
@@ -179,6 +187,17 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
           ('ba-hnb-02', 'Hatton National Bank', 'R A S T Rajapaksha', '141020146041', 'Pilimathalawa', 1, 2)
         `);
         logs.push("Seeded initial bank accounts into table 'bank_accounts'");
+      }
+    }
+
+    // Seed initial system settings if empty
+    if (await tableExists(pool, "system_settings")) {
+      const [settingRows] = await pool.query<any[]>("SELECT COUNT(*) as count FROM system_settings WHERE setting_key = 'monthly_target'");
+      if (settingRows && settingRows[0]?.count === 0) {
+        await pool.query(`
+          INSERT INTO system_settings (setting_key, setting_value) VALUES ('monthly_target', '500000')
+        `);
+        logs.push("Seeded initial monthly_target into table 'system_settings'");
       }
     }
 

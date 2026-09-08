@@ -43,10 +43,35 @@ export default function PaymentsManagementPage() {
   const rowsPerPage = 10;
 
  useEffect(() => {
+  // Load target from local storage first for instant response
+  const localTarget = localStorage.getItem("monthlyTarget");
+  if (localTarget) {
+    const val = Number(localTarget);
+    if (!isNaN(val) && val > 0) {
+      setMonthlyTarget(val);
+      setTempTarget(val);
+    }
+  }
+
   const fetchData = async () => {
     try {
       // Helper to normalize IDs
       const normalize = (v: any) => String(v).trim().toUpperCase();
+
+      // Fetch target from server settings DB
+      fetch("/api/settings?key=monthly_target")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.value) {
+            const val = Number(data.value);
+            if (!isNaN(val) && val > 0) {
+              setMonthlyTarget(val);
+              setTempTarget(val);
+              localStorage.setItem("monthlyTarget", String(val));
+            }
+          }
+        })
+        .catch((err) => console.error("Failed to load target setting", err));
 
       // Fetch payments
       const paymentsRes = await fetch("/api/payment?all=true");
@@ -249,9 +274,19 @@ export default function PaymentsManagementPage() {
     }
   };
 
-  const handleSaveTarget = () => {
+  const handleSaveTarget = async () => {
     setMonthlyTarget(tempTarget);
     setEditingTarget(false);
+    try {
+      localStorage.setItem("monthlyTarget", String(tempTarget));
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "monthly_target", value: tempTarget }),
+      });
+    } catch (err) {
+      console.error("Failed to save monthly target setting", err);
+    }
   };
 
   const targetVsActual = [
