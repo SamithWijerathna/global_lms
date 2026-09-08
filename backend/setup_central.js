@@ -1,12 +1,13 @@
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
+require("dotenv").config();
 
 async function main() {
   const conn = await mysql.createConnection({
-    host: "127.0.0.1",
-    port: 3306,
-    user: "root",
-    password: "samith",
+    host: process.env.DB_HOST || "127.0.0.1",
+    port: parseInt(process.env.DB_PORT || "3306", 10),
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : "samith",
   });
 
   await conn.query("CREATE DATABASE IF NOT EXISTS `cloudwave_lms_central` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
