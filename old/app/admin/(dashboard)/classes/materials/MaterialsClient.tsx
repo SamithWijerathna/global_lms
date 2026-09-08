@@ -257,9 +257,12 @@ export default function MaterialsPage() {
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10" />
 
-                <CardFooter className="absolute bg-white/30 backdrop-blur-md bottom-0 border-t-1 border-zinc-100/50 z-20 w-full">
+                <CardFooter className="absolute bg-black/65 backdrop-blur-md bottom-0 border-t border-white/10 z-20 w-full">
                   <div className="flex flex-col gap-1 w-full px-4 py-3">
-                    <h4 className="text-white font-semibold text-2xl drop-shadow-lg">
+                    <h4 
+                      className="text-white font-bold text-base sm:text-lg leading-snug line-clamp-3 drop-shadow-md"
+                      title={cls.class_title}
+                    >
                       {cls.class_title}
                     </h4>
                     <p className="text-white/80 text-sm">

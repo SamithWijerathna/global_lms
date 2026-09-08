@@ -353,7 +353,10 @@ export default function EditClassPage() {
 
               <CardFooter className="absolute bg-black/65 backdrop-blur-md bottom-0 border-t border-white/10 z-20 w-full p-4">
                 <div className="flex flex-col gap-2 w-full">
-                  <h4 className="font-bold text-lg text-white leading-tight line-clamp-2 drop-shadow-md">
+                  <h4 
+                    className="font-bold text-sm sm:text-base text-white leading-snug line-clamp-3 drop-shadow-md"
+                    title={formData.class_title}
+                  >
                     {formData.class_title || "Class Title"}
                   </h4>
                   <div>

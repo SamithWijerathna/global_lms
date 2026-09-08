@@ -322,7 +322,10 @@ export default function LessonStorePage() {
 
                 <CardFooter className="absolute bg-black/65 backdrop-blur-md bottom-0 border-t border-white/10 z-20 w-full p-4">
                   <div className="flex flex-col gap-2 w-full">
-                    <h4 className={`font-bold text-lg leading-tight line-clamp-2 drop-shadow-md ${isPending ? "text-white/70" : "text-white"}`}>
+                    <h4 
+                      className={`font-bold text-sm sm:text-base leading-snug line-clamp-3 drop-shadow-md ${isPending ? "text-white/70" : "text-white"}`}
+                      title={cls.class_title}
+                    >
                       {cls.class_title || "Untitled Class"}
                     </h4>
                     <div>

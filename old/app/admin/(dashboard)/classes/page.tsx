@@ -288,7 +288,10 @@ export default function ClassListPage() {
                         {/* Footer with Class Details & Action Buttons */}
                         <CardFooter className="absolute bg-black/65 backdrop-blur-md bottom-0 border-t border-white/10 z-20 w-full p-4">
                           <div className="flex flex-col gap-2 w-full">
-                            <h4 className="text-white font-bold text-lg leading-tight line-clamp-2 drop-shadow-md">
+                            <h4 
+                              className="text-white font-bold text-sm sm:text-base leading-snug line-clamp-3 drop-shadow-md"
+                              title={cls.class_title}
+                            >
                               {cls.class_title}
                             </h4>
 

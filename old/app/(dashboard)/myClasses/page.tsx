@@ -944,9 +944,12 @@ export default function MyLessonPage() {
                     {formatExpiry(cls.expiry_date)}
                   </Chip>
                 </div>
-                <CardFooter className="absolute bottom-0 z-30 w-full bg-white/30 backdrop-blur-md">
+                <CardFooter className="absolute bottom-0 z-30 w-full bg-black/65 backdrop-blur-md border-t border-white/10">
                   <div className="flex flex-col gap-2 w-full p-4">
-                    <h3 className="text-white text-2xl font-bold drop-shadow-lg">
+                    <h3 
+                      className="text-white text-base sm:text-lg font-bold leading-snug line-clamp-3 drop-shadow-md"
+                      title={cls.class_title}
+                    >
                       {cls.class_title}
                     </h3>
                     <p className="text-white/80 text-sm line-clamp-2">
