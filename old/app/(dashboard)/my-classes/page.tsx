@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { Spinner } from "@heroui/spinner";
 import {
   Card,
   CardFooter,
@@ -526,11 +527,7 @@ export default function MyLessonPage() {
             };
           });
         setClasses(enrichedClasses);
-        setError(
-          enrichedClasses.length === 0
-            ? "No enrolled classes found. Visit the store to enroll."
-            : null
-        );
+        setError(null);
       } catch (err) {
         console.error(err);
         setError("Failed to load classes.");
@@ -655,8 +652,30 @@ export default function MyLessonPage() {
     setIsPaymentModalOpen(open);
   };
 
-  if (loading) return <p className="text-center text-default-500 py-20">Loading your classes...</p>;
-  if (error) return <p className="text-center text-danger py-20">{error}</p>;
+  if (loading) {
+    return (
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          My Classes
+        </h1>
+        <div className="w-full h-80 flex items-center justify-center">
+          <Spinner size="md" />
+        </div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          My Classes
+        </h1>
+        <div className="min-h-[60vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-danger font-medium">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedMaterial) {
     return (
@@ -893,12 +912,16 @@ export default function MyLessonPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-12">My Classes</h1>
+    <div className="w-full space-y-6 pb-12">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+        My Classes
+      </h1>
       {classes.length === 0 ? (
-        <p className="text-center text-default-500 py-20">
-          No enrolled classes yet.
-        </p>
+        <div className="min-h-[60vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+            No enrolled classes found.
+          </p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {classes.map((cls) => {

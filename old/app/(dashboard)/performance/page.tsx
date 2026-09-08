@@ -222,14 +222,40 @@ export default function StudentMarksDashboard() {
     }));
   }, [marks?.trend]);
 
-  if (authLoading || loading) return <div className="w-full h-full flex justify-center items-center"><Spinner size="md" /></div>;
-  if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
-  if (!marks || !marks.trend?.length)
-    return <div className="p-4 w-full h-full flex items-center justify-center text-gray-500">No marks data available.</div>;
+  if (authLoading || loading) return <div className="w-full h-96 flex justify-center items-center"><Spinner size="md" /></div>;
+  if (error) {
+    return (
+      <div className="w-full space-y-6">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Performance Analytics
+        </h1>
+        <div className="min-h-[60vh] flex items-center justify-center text-center text-danger font-medium text-sm sm:text-base">
+          Error: {error}
+        </div>
+      </div>
+    );
+  }
+  if (!marks || !marks.trend?.length) {
+    return (
+      <div className="w-full space-y-6">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Performance Analytics
+        </h1>
+        <div className="min-h-[60vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+            No marks data available.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="gap-5">
-      <div className="mt-4 grid pb-4 gap-4 md:grid-cols-2 overflow-y-auto">
+    <div className="w-full space-y-6 pb-12">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+        Performance Analytics
+      </h1>
+      <div className="grid pb-4 gap-4 md:grid-cols-2">
 {rank && rank.rank && marks.latestPaperId ? (
         <GlassSurface className="p-4 !h-full flex !w-full bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex flex-col justify-center items-start w-full">

@@ -2,16 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/src/lib/useAuth";
-import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-  Pagination,
-  getKeyValue,
-} from "@heroui/react";
+import { Pagination } from "@heroui/react";
 
 interface Payment {
   id: number;
@@ -72,7 +63,6 @@ export default function PaymentsPage() {
 
     async function fetchPayments() {
       try {
-        console.log("Fetching payments for user:", userUuid);
         const res = await fetch("/api/payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -82,7 +72,6 @@ export default function PaymentsPage() {
           }),
         });
         const data = await res.json();
-        console.log("Payments API response:", data);
         if (Array.isArray(data)) {
           setPayments(data);
         } else {
@@ -145,89 +134,130 @@ export default function PaymentsPage() {
     }
   }, [currentPage, totalPages]);
 
-  const renderCell = (item: any, columnKey: React.Key) => {
-    const cellValue = getKeyValue(item, columnKey as string);
-
+  const renderCell = (item: any, columnKey: string) => {
     if (columnKey === "proof") {
       return item.proof ? (
         <a
           href={`/${item.proof}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 dark:text-blue-400 underline hover:opacity-80"
+          className="text-primary underline hover:opacity-80 font-medium"
         >
           View
         </a>
       ) : (
-        <span className="text-gray-500 dark:text-gray-400">No proof</span>
+        <span className="text-muted-foreground">No proof</span>
       );
     }
 
     if (columnKey === "status") {
       const color =
         item.status.toLowerCase() === "approved"
-          ? "text-green-600 dark:text-green-400"
+          ? "text-emerald-600 dark:text-emerald-400 font-semibold"
           : item.status.toLowerCase() === "rejected"
-          ? "text-red-600 dark:text-red-400"
-          : "text-yellow-600 dark:text-yellow-400";
-      return <span className={`font-medium ${color}`}>{item.status.toUpperCase()}</span>;
+          ? "text-rose-600 dark:text-rose-400 font-semibold"
+          : "text-amber-600 dark:text-amber-400 font-semibold";
+      return <span className={color}>{item.status.toUpperCase()}</span>;
     }
 
     if (columnKey === "amount") {
-      return <span className="font-medium">{formatAmount(item.amount)}</span>;
+      return <span className="font-semibold">{formatAmount(item.amount)}</span>;
     }
 
-    return cellValue;
+    return item[columnKey];
   };
 
-  if (loading || fetching) return <div className="p-8 text-center">Loading payments...</div>;
-  if (!user) return <div className="p-8 text-center text-red-500">Not logged in</div>;
+  if (loading || fetching) {
+    return (
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Payment History
+        </h1>
+        <div className="w-full h-80 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading payment history...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Payment History
+        </h1>
+        <div className="w-full h-80 flex items-center justify-center">
+          <p className="text-sm text-rose-500 font-medium">Not logged in</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto p-6 bg-white dark:bg-gray-900 rounded-xl shadow mt-8">
-      <h2 className="text-2xl font-bold mb-6">My Payments</h2>
+    <div className="w-full space-y-6 pb-12">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+        Payment History
+      </h1>
 
-      <div className="mb-6 max-w-md">
+      <div className="max-w-md">
         <input
           type="search"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search by amount, type, ID, bank, status, date..."
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
         />
       </div>
 
       {sortedPayments.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          {searchTerm ? "No matching payments found." : "No payments found."}
+        <div className="min-h-[40vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+            {searchTerm ? "No matching payments found." : "No payment history available."}
+          </p>
         </div>
       ) : (
         <>
-          <Table aria-label="My payments table">
-            <TableHeader columns={columns}>
-              {(column) => (
-                <TableColumn key={column.key} className="text-left">
-                  {column.label}
-                </TableColumn>
-              )}
-            </TableHeader>
-            <TableBody items={paginatedRows}>
-              {(item) => (
-                <TableRow key={item.key}>
-                  {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          <div className="mt-6 flex justify-center">
-            <Pagination
-              page={currentPage}
-              total={totalPages}
-              onChange={setCurrentPage}
-              showControls
-            />
+          <div className="relative w-full overflow-auto rounded-lg border border-border bg-card shadow-sm">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b bg-muted/50">
+                <tr className="border-b transition-colors hover:bg-muted/50">
+                  {columns.map((column) => (
+                    <th
+                      key={column.key}
+                      className="h-10 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap"
+                    >
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0 divide-y divide-border">
+                {paginatedRows.map((item) => (
+                  <tr
+                    key={item.key}
+                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                  >
+                    {columns.map((column) => (
+                      <td key={column.key} className="p-4 align-middle whitespace-nowrap">
+                        {renderCell(item, column.key)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="mt-6 flex justify-center">
+              <Pagination
+                page={currentPage}
+                total={totalPages}
+                onChange={setCurrentPage}
+                showControls
+              />
+            </div>
+          )}
         </>
       )}
     </div>

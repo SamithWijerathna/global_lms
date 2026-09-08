@@ -237,8 +237,8 @@ export default function LessonStorePage() {
   };
 
   return (
-    <div className="p-6 min-h-screen">
-      <h1 className="text-4xl font-bold mb-8 text-center">
+    <div className="w-full space-y-6 pb-12">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
         Available Classes for Enrollment
       </h1>
 
@@ -258,13 +258,13 @@ export default function LessonStorePage() {
           ))}
         </div>
       ) : error ? (
-        <div className="text-center py-20">
-          <p className="text-xl text-danger">{error}</p>
+        <div className="min-h-[60vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-danger font-medium">{error}</p>
         </div>
       ) : classes.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-xl text-default-500">
-            No available classes at the moment.
+        <div className="min-h-[60vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+            No available classes for your batch at this time.
           </p>
         </div>
       ) : (

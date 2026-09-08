@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { Spinner } from "@heroui/spinner";
 import {
   Card,
   CardFooter,
@@ -534,11 +535,7 @@ export default function QuickAccessPage() {
             };
           });
         setClasses(enrichedClasses);
-        setError(
-          enrichedClasses.length === 0
-            ? "No enrolled classes found. Visit the store to enroll."
-            : null
-        );
+        setError(null);
       } catch (err) {
         console.error(err);
         setError("Failed to load classes.");
@@ -677,8 +674,30 @@ export default function QuickAccessPage() {
     setIsPaymentModalOpen(open);
   };
 
-  if (loading) return <p className="text-center text-default-500 py-20">Loading your classes...</p>;
-  if (error) return <p className="text-center text-danger py-20">{error}</p>;
+  if (loading) {
+    return (
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Class Materials
+        </h1>
+        <div className="w-full h-80 flex items-center justify-center">
+          <Spinner size="md" />
+        </div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Class Materials
+        </h1>
+        <div className="min-h-[60vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-danger font-medium">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedMaterial) {
     return (
@@ -698,26 +717,28 @@ export default function QuickAccessPage() {
   }, {} as Record<string, Material[]>);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-12">
-        Quick Access - All Materials
+    <div className="w-full space-y-6 pb-12">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+        Class Materials
       </h1>
 
       {/* Materials Section */}
       {classes.length === 0 ? (
-        <p className="text-center text-default-500 py-20">
-          No enrolled classes yet.
-        </p>
+        <div className="min-h-[60vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+            No enrolled classes found.
+          </p>
+        </div>
       ) : loadingAllMaterials ? (
-        <p className="text-center text-default-500 py-20">
-          Loading all materials...
-        </p>
+        <div className="w-full h-80 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading all materials...</p>
+        </div>
       ) : allMaterials.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-warning text-xl mb-4">
+        <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-muted-foreground font-medium mb-1">
             No active materials available.
           </p>
-          <p className="text-default-600">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Your classes may be expired or pending payment. Renew below to access materials.
           </p>
         </div>

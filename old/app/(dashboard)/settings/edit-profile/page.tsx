@@ -130,8 +130,11 @@ export default function EditProfilePage() {
   const profileImageUrl = preview || user.profile_url || "https://via.placeholder.com/128?text=No+Image";
 
   return (
-    <div className="mx-auto p-6 bg-white dark:bg-gray-900 rounded-xl shadow mt-8 pb-24 sm:pb-6">
-      <h2 className="text-2xl font-bold mb-8">Edit Profile</h2>
+    <div className="w-full space-y-6 pb-12">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+        Edit Profile
+      </h1>
+      <div className="p-6 bg-card text-card-foreground border border-border rounded-xl shadow">
 
       {/* Profile Picture */}
       <div className="flex flex-col items-start mb-10">
@@ -289,6 +292,7 @@ export default function EditProfilePage() {
           {errorMessage}
         </div>
       )}
+      </div>
     </div>
   );
 }

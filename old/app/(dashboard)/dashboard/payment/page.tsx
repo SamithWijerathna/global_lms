@@ -114,19 +114,30 @@ const { userData } = useAuth();
 
   if (!classData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <p className="text-gray-600">No class found. Please start from the classes page.</p>
+      <div className="w-full space-y-6 pb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+          Class Payment
+        </h1>
+        <div className="min-h-[60vh] flex items-center justify-center text-center">
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+            No class selected for payment. Please select a class from the Class Store.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-200 to-gray-100 flex items-center justify-center px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-lg"
-      >
+    <div className="w-full space-y-6 pb-12">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+        Class Payment
+      </h1>
+      <div className="flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card text-card-foreground border border-border shadow-lg rounded-2xl p-8 w-full max-w-lg"
+        >
         <AnimatePresence mode="wait">
           {!submitted && (
             <>
@@ -228,6 +239,7 @@ const { userData } = useAuth();
         </AnimatePresence>
       </motion.div>
       <p className="absolute bottom-2 right-2 text-xs text-gray-500">{session_id}</p>
+      </div>
     </div>
   );
 }

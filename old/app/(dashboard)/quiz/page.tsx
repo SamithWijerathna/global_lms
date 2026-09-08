@@ -662,21 +662,23 @@ export default function StudentQuickQuizPage() {
 
   // Quiz Listing Page
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+    <div className="w-full space-y-6 pb-12">
+      <div className="text-left">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
           Quick Quiz Access
         </h1>
-        <p className="text-default-600 text-lg mt-3">Test your knowledge and track your progress</p>
+        <p className="text-muted-foreground text-sm sm:text-base mt-1">
+          Test your knowledge and track your progress
+        </p>
       </div>
 
       {quizzes.length === 0 ? (
-        <GlassSurface className="max-w-2xl mx-auto">
-          <div className="text-center py-20">
-            <BookOpen className="h-24 w-24 text-default-400 mx-auto mb-6" />
-            <p className="text-xl text-default-500">No quizzes available at the moment</p>
-          </div>
-        </GlassSurface>
+        <div className="min-h-[50vh] flex flex-col items-center justify-center text-center">
+          <BookOpen className="h-16 w-16 text-muted-foreground/40 mb-4" />
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+            No quizzes available at the moment.
+          </p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {quizzes.map((quiz) => {

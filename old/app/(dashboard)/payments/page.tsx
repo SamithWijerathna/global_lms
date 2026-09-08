@@ -54,8 +54,11 @@ export default function PaymentsPage() {
     if (!user) return <div className="p-8 text-center text-red-500">Not logged in</div>;
 
     return (
-        <div className="max-w-5xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-xl shadow mt-8">
-            <h2 className="text-2xl font-bold mb-6">My Payments</h2>
+        <div className="w-full space-y-6 pb-12">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+                Payments
+            </h1>
+            <div className="p-6 bg-card text-card-foreground border border-border rounded-xl shadow">
             <div className="overflow-x-auto">
                 <table className="min-w-full border">
                     <thead>
@@ -94,6 +97,7 @@ export default function PaymentsPage() {
                         )}
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
     );

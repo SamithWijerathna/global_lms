@@ -14,13 +14,15 @@ export default function SettingsSection() {
   }, []);
 
   return (
-    <section>
-      <h2 className="text-xl font-semibold mb-1">Settings</h2>
-      <ul className="ml-4 list-disc">
+    <div className="w-full space-y-6 pb-12">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+        Settings
+      </h1>
+      <ul className="ml-4 list-disc space-y-2 text-muted-foreground">
         <li>Edit Profile: {profile ? `${profile.first_name} ${profile.last_name}` : "Loading..."}</li>
         <li>Payment Settings: {paymentSettings ? paymentSettings.status || "Loaded" : "Loading..."}</li>
         <li>Payment History: {paymentHistory.length} records</li>
       </ul>
-    </section>
+    </div>
   );
 }

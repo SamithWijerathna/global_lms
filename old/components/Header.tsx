@@ -20,7 +20,8 @@ import {
 } from "@/components/icons";
 import { Input } from "@heroui/input";
 import { Kbd } from "@heroui/kbd";
-import { Bell, Settings, LogOut, User } from "lucide-react";
+import { Bell, Settings, LogOut, User, PanelLeft } from "lucide-react";
+import { AnimatedSidebarTrigger } from "@/components/motion/animated-sidebar";
 export const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => {
   return (
     <svg
@@ -175,8 +176,8 @@ export function Header() {
       readOnly
       aria-label="Search"
       classNames={{
-        inputWrapper: "bg-default-100 cursor-pointer",
-        input: "text-sm cursor-pointer",
+        inputWrapper: "bg-default-100 cursor-pointer h-9 w-44 sm:w-64 max-w-[200px] sm:max-w-xs",
+        input: "text-xs sm:text-sm cursor-pointer",
       }}
       endContent={
         <Kbd className="hidden lg:inline-block" keys={["command"]}>
@@ -192,16 +193,15 @@ export function Header() {
     />
   );
 
-  if (!mounted) {
-    return (
-      <header className="flex items-center justify-between bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm px-4 sm:px-8 h-14 min-h-[56px]" />
-    );
-  }
+
 
   return (
-    <header className="flex items-center justify-between bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm px-4 sm:px-8 h-14 min-h-[56px]">
-      {/* Left: Logo & App Name */}
-      <div className="flex items-center gap-3">
+    <header className="flex items-center justify-between bg-background border-b border-border shadow-sm px-4 sm:px-8 h-14 min-h-[56px]">
+      {/* Left: Sidebar Trigger & Search */}
+      <div className="flex items-center gap-2.5">
+        <AnimatedSidebarTrigger className="hidden md:inline-flex p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground">
+          <PanelLeft className="size-5" />
+        </AnimatedSidebarTrigger>
         {searchInput}
       </div>
 
@@ -282,7 +282,7 @@ export function Header() {
                 <p className="font-normal">{user?.user_email}</p>
               </DropdownItem>
               <DropdownItem key="dashboard" onPress={() => router.push('/dashboard')}>Dashboard</DropdownItem>
-              <DropdownItem key="editProfile" onPress={() => router.push('/settings/editProfile')}>Edit Profile</DropdownItem>
+              <DropdownItem key="editProfile" onPress={() => router.push('/settings/edit-profile')}>Edit Profile</DropdownItem>
               {/* <DropdownItem key="new_project" endContent={<PlusIcon className="text-large" />}>
             New Project
           </DropdownItem> */}

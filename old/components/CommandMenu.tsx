@@ -30,12 +30,12 @@ import { ScrollShadow } from "@heroui/scroll-shadow"; // Optional: for fade shad
 const staticActions = [
   { name: "Dashboard", path: "/dashboard", icon: Home },
   { name: "Performance", path: "/performance", icon: BarChart3 },
-  { name: "Class Store", path: "/classStore", icon: Package },
-  { name: "My Classes", path: "/myClasses", icon: List },
+  { name: "Class Store", path: "/class-store", icon: Package },
+  { name: "My Classes", path: "/my-classes", icon: List },
   { name: "Quiz", path: "/quiz", icon: CheckSquare },
-  { name: "Class Materials", path: "/classMaterials", icon: BookOpen },
-  { name: "Edit Profile", path: "/settings/editProfile", icon: User },
-  { name: "Payment History", path: "/settings/paymentHistory", icon: FileText },
+  { name: "Class Materials", path: "/class-materials", icon: BookOpen },
+  { name: "Edit Profile", path: "/settings/edit-profile", icon: User },
+  { name: "Payment History", path: "/settings/payment-history", icon: FileText },
 ];
 
 type SearchResults = {
@@ -227,7 +227,7 @@ React.useEffect(() => {
                       <Command.Item
                         key={m.material_id}
                         onSelect={() => {
-                          router.push(`/classMaterials?material=${m.material_id}`);
+                          router.push(`/class-materials?material=${m.material_id}`);
                           setOpen(false);
                         }}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg data-[selected=true]:bg-purple-100 dark:data-[selected=true]:bg-purple-900/30 cursor-pointer transition-colors"
@@ -251,7 +251,7 @@ React.useEffect(() => {
                       <Command.Item
                         key={c.class_id}
                         onSelect={() => {
-                          router.push(`/myClasses?class=${c.class_id}`);
+                          router.push(`/my-classes?class=${c.class_id}`);
                           setOpen(false);
                         }}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg data-[selected=true]:bg-green-100 dark:data-[selected=true]:bg-green-900/30 cursor-pointer transition-colors"
