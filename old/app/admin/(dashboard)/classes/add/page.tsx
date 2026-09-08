@@ -7,6 +7,8 @@ import {
   CardBody,
   CardFooter,
 } from "@heroui/card";
+import { Chip } from "@heroui/chip";
+import { Info } from "lucide-react";
 import { Input } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import { Button } from "@heroui/button";
@@ -277,56 +279,66 @@ const handleSubmit = async (e: React.FormEvent) => {
             </Card>
           ) : (
             // Actual Preview Card
-            <Card isFooterBlurred className="w-full max-w-md h-[420px] shadow-2xl">
-              <CardHeader className="absolute z-10 top-1 flex-col items-start">
-                <p className="text-tiny text-white/80 uppercase font-bold">New</p>
-
-              </CardHeader>
-
+            <Card className="relative w-full max-w-md h-[420px] overflow-hidden shadow-2xl flex flex-col justify-between">
               {previewUrl ? (
                 <Image
                   removeWrapper
                   alt="Class preview"
-                  className="z-0 w-full h-full object-cover scale-125 -translate-y-6"
+                  className="z-0 w-full h-full object-cover"
                   src={previewUrl}
                 />
               ) : (
-                <div className="z-0 w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                <div className="z-0 w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
                   <span className="text-white/70 text-xl font-medium">No Image</span>
                 </div>
               )}
 
-              <CardFooter className="absolute bg-white/30 backdrop-blur-md bottom-0 border-t-1 border-zinc-100/50 z-10 ">
-                <div className="flex flex-col gap-1 w-full">
-                      <h4 className="text-white font-semibold text-2xl drop-shadow-lg">
-                        {formData.class_title || "Class Title"}
-                      </h4>
-                  
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="text-white text-lg font-bold drop-shadow">
-                          Rs {formData.class_price || "0"}
-                        </p>
-                        <p className="text-white/80 text-sm">
-                          {formData.batch || "Batch"} • {formData.class_type} • {formData.renew_type}
-                        </p>
-                        <p className="text-white/70 text-xs mt-1">
-                          {formData.class_description || "Class description will appear here"}
-                        </p>
-                      </div>
-                      <Button
-                      className="text-tiny font-medium"
-                      color="primary"
-                      radius="full"
+              <div className="absolute top-3 left-3 z-30">
+                <Chip size="sm" color="primary" variant="solid" className="font-bold uppercase tracking-wider text-[10px]">
+                  New
+                </Chip>
+              </div>
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent z-10" />
+
+              <CardFooter className="absolute bg-black/65 backdrop-blur-md bottom-0 border-t border-white/10 z-20 w-full p-4">
+                <div className="flex flex-col gap-2 w-full">
+                  <h4 className="font-bold text-lg text-white leading-tight line-clamp-2 drop-shadow-md">
+                    {formData.class_title || "Class Title"}
+                  </h4>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-base font-bold text-white drop-shadow">
+                        Rs {formData.class_price || "0"}
+                      </p>
+                      <span className="text-white/70 text-xs font-medium bg-white/10 px-2 py-0.5 rounded-md">
+                        {formData.batch || "Batch"} {formData.class_type ? `• ${formData.class_type}` : ""}
+                      </span>
+                    </div>
+                    <p className="text-white/70 text-xs mt-1 line-clamp-2 leading-relaxed">
+                      {formData.class_description || "Class description will appear here"}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 mt-auto w-full">
+                    <Button
                       size="sm"
+                      variant="flat"
+                      startContent={<Info className="w-3.5 h-3.5" />}
+                      className="flex-1 text-white bg-white/20 hover:bg-white/30 backdrop-blur-md text-xs font-medium"
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      color="primary"
+                      size="sm"
+                      className="flex-1 text-xs font-semibold shadow-md"
                     >
                       Enroll Now
                     </Button>
                   </div>
-</div>
-
-
-            </CardFooter>
+                </div>
+              </CardFooter>
             </Card>
           )}
       </div>
