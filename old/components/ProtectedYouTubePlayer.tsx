@@ -43,7 +43,6 @@ declare global {
   }
 }
 
-import { useAuth } from "@/src/lib/useAuth";
 
 interface ProtectedYouTubePlayerProps {
   url: string;

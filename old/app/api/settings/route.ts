@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       const logoFile = formData.get("logo_file");
       if (logoFile && logoFile instanceof File && logoFile.size > 0) {
         const bytes = await logoFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+        const buffer = new Uint8Array(bytes);
         const ext = path.extname(logoFile.name) || ".png";
         const filename = `logo-${Date.now()}${ext}`;
         await writeFile(path.join(uploadDir, filename), buffer);
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       const faviconFile = formData.get("favicon_file");
       if (faviconFile && faviconFile instanceof File && faviconFile.size > 0) {
         const bytes = await faviconFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+        const buffer = new Uint8Array(bytes);
         const ext = path.extname(faviconFile.name) || ".ico";
         const filename = `favicon-${Date.now()}${ext}`;
         await writeFile(path.join(uploadDir, filename), buffer);
