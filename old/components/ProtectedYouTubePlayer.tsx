@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Gauge, Settings } from "lucide-react";
 
 export function getYouTubeId(url: string): string | null {
   if (!url) return null;
@@ -49,6 +49,17 @@ interface ProtectedYouTubePlayerProps {
   className?: string;
 }
 
+const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const QUALITY_LABELS: Record<string, string> = {
+  auto: "Auto",
+  hd1080: "1080p HD",
+  hd720: "720p HD",
+  large: "480p",
+  medium: "360p",
+  small: "240p",
+  tiny: "144p",
+};
+
 export default function ProtectedYouTubePlayer({ url, watermarkText, className = "" }: ProtectedYouTubePlayerProps) {
   const { user } = useAuth();
   const displayWatermark = watermarkText || (user?.student_id ? `Lashinigeo - ${user.student_id}` : "Lashinigeo Protected");
@@ -63,6 +74,11 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
   const [currentTime, setCurrentTime] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [currentQuality, setCurrentQuality] = useState("auto");
+  const [availableQualities, setAvailableQualities] = useState<string[]>([]);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
 
   // Load YouTube Iframe API script if needed
   useEffect(() => {
@@ -93,6 +109,12 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
           onReady: (event: any) => {
             setIsReady(true);
             setDuration(event.target.getDuration());
+            if (event.target.getAvailableQualityLevels) {
+              const qualities = event.target.getAvailableQualityLevels();
+              if (Array.isArray(qualities) && qualities.length > 0) {
+                setAvailableQualities(qualities);
+              }
+            }
           },
           onStateChange: (event: any) => {
             // YT.PlayerState.PLAYING = 1, PAUSED = 2, ENDED = 0
@@ -128,13 +150,19 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
     };
   }, [videoId]);
 
-  // Sync progress timer
+  // Sync progress timer & state
   useEffect(() => {
     let interval: any;
     if (isPlaying && playerRef.current && playerRef.current.getCurrentTime) {
       interval = setInterval(() => {
         setCurrentTime(playerRef.current.getCurrentTime() || 0);
         setDuration(playerRef.current.getDuration() || 0);
+        if (playerRef.current.getAvailableQualityLevels) {
+          const qualities = playerRef.current.getAvailableQualityLevels();
+          if (Array.isArray(qualities) && qualities.length > 0) {
+            setAvailableQualities(qualities);
+          }
+        }
       }, 500);
     }
     return () => clearInterval(interval);
@@ -164,6 +192,8 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
     } else {
       playerRef.current.playVideo();
     }
+    setShowSpeedMenu(false);
+    setShowQualityMenu(false);
   };
 
   const toggleMute = () => {
@@ -183,6 +213,22 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
     if (playerRef.current && playerRef.current.seekTo) {
       playerRef.current.seekTo(newTime, true);
     }
+  };
+
+  const handleSpeedChange = (rate: number) => {
+    setPlaybackRate(rate);
+    if (playerRef.current && playerRef.current.setPlaybackRate) {
+      playerRef.current.setPlaybackRate(rate);
+    }
+    setShowSpeedMenu(false);
+  };
+
+  const handleQualityChange = (quality: string) => {
+    setCurrentQuality(quality);
+    if (playerRef.current && playerRef.current.setPlaybackQuality) {
+      playerRef.current.setPlaybackQuality(quality);
+    }
+    setShowQualityMenu(false);
   };
 
   const toggleFullscreen = () => {
@@ -207,11 +253,11 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
     >
-      {/* YouTube Iframe container - pointer-events-none completely blocks clicking any YouTube elements */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* YouTube Iframe container - cropped scale hides top/bottom letterboxing black bars */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden bg-black">
         <div 
           ref={iframeRef} 
-          className="w-full h-full transform scale-[1.05]" 
+          className="absolute w-[130%] h-[130%] -top-[15%] -left-[15%] pointer-events-none object-cover" 
         />
       </div>
 
@@ -235,9 +281,9 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
         )}
       </div>
 
-      {/* Custom Control Bar (Play/Pause, Scrubber, Volume, Fullscreen) */}
+      {/* Custom Control Bar (Play/Pause, Scrubber, Speed, Quality, Fullscreen) */}
       <div 
-        className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-6 flex flex-col gap-2 opacity-100 transition-opacity duration-300"
+        className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-3 pt-6 flex flex-col gap-2 opacity-100 transition-opacity duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Progress Bar */}
@@ -248,7 +294,7 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
           step={0.1}
           value={currentTime}
           onChange={handleSeek}
-          className="w-full h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-primary hover:h-2.5 transition-all"
+          className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary hover:h-2 transition-all"
         />
 
         <div className="flex items-center justify-between text-white text-xs px-1">
@@ -274,12 +320,78 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
             </button>
 
             {/* Time display */}
-            <span className="font-mono text-white/90">
+            <span className="font-mono text-white/90 text-xs">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Playback Speed Menu Button */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowSpeedMenu(!showSpeedMenu);
+                  setShowQualityMenu(false);
+                }}
+                type="button"
+                className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors text-xs font-semibold flex items-center gap-1 focus:outline-none"
+                title="Playback Speed"
+              >
+                <Gauge className="w-3.5 h-3.5" />
+                <span>{playbackRate}x</span>
+              </button>
+
+              {showSpeedMenu && (
+                <div className="absolute bottom-9 right-0 bg-black/90 backdrop-blur-md border border-white/20 rounded-lg shadow-xl py-1 min-w-[90px] z-50 flex flex-col text-xs">
+                  <span className="px-3 py-1 text-[10px] uppercase font-bold text-white/50 border-b border-white/10">Speed</span>
+                  {SPEED_OPTIONS.map((rate) => (
+                    <button
+                      key={rate}
+                      onClick={() => handleSpeedChange(rate)}
+                      className={`px-3 py-1.5 text-left hover:bg-white/20 transition-colors ${
+                        playbackRate === rate ? "text-primary font-bold bg-white/10" : "text-white"
+                      }`}
+                    >
+                      {rate}x {rate === 1 ? "(Normal)" : ""}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Quality Selector Menu Button */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowQualityMenu(!showQualityMenu);
+                  setShowSpeedMenu(false);
+                }}
+                type="button"
+                className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors text-xs font-semibold flex items-center gap-1 focus:outline-none"
+                title="Video Quality"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>{QUALITY_LABELS[currentQuality] || currentQuality}</span>
+              </button>
+
+              {showQualityMenu && (
+                <div className="absolute bottom-9 right-0 bg-black/90 backdrop-blur-md border border-white/20 rounded-lg shadow-xl py-1 min-w-[110px] z-50 flex flex-col text-xs">
+                  <span className="px-3 py-1 text-[10px] uppercase font-bold text-white/50 border-b border-white/10">Quality</span>
+                  {(availableQualities.length > 0 ? availableQualities : ["auto", "hd1080", "hd720", "large", "medium"]).map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => handleQualityChange(q)}
+                      className={`px-3 py-1.5 text-left hover:bg-white/20 transition-colors ${
+                        currentQuality === q ? "text-primary font-bold bg-white/10" : "text-white"
+                      }`}
+                    >
+                      {QUALITY_LABELS[q] || q}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Fullscreen Button */}
             <button
               onClick={toggleFullscreen}

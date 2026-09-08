@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { RadioGroup, Radio } from "@heroui/radio";
 import { Card } from "@heroui/card";
 import { Spinner } from "@heroui/spinner";
-import { Building2, Upload, AlertCircle } from "lucide-react";
+import { Building2, Upload, AlertCircle, CheckCircle2, FileText, RefreshCw } from "lucide-react";
 
 export interface BankAccount {
   id: number;
@@ -100,8 +100,14 @@ export default function BankTransferSection({
   const selectedAccount =
     bankAccounts.find((a) => a.bank_name === bankChoice) || bankAccounts[0];
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {/* Show selector only if there are MORE THAN 1 accounts */}
       {bankAccounts.length > 1 && (
         <RadioGroup
@@ -113,7 +119,7 @@ export default function BankTransferSection({
         >
           {bankAccounts.map((account) => (
             <Radio key={account.id || account.uuid} value={account.bank_name}>
-              <div className="flex items-center gap-2 font-medium">
+              <div className="flex items-center gap-2 font-medium text-sm">
                 <Building2 className="w-4 h-4 text-primary" />
                 {account.bank_name}
               </div>
@@ -124,23 +130,23 @@ export default function BankTransferSection({
 
       {/* Selected Bank Details Card */}
       {selectedAccount && (
-        <Card className="bg-default-100 dark:bg-default-50/5 p-5 text-small gap-2">
-          <p className="font-semibold text-base text-primary mb-1">
+        <Card className="bg-default-100 dark:bg-default-50/5 p-4 text-small gap-1.5 border border-default-200/50">
+          <p className="font-semibold text-base text-primary">
             {selectedAccount.bank_name}
           </p>
-          <p>
+          <p className="text-xs md:text-sm">
             <strong>Account Name:</strong> {selectedAccount.account_name}
           </p>
-          <p>
+          <p className="text-xs md:text-sm">
             <strong>Account Number:</strong> {selectedAccount.account_number}
           </p>
           {selectedAccount.branch_name && (
-            <p>
+            <p className="text-xs md:text-sm">
               <strong>Branch:</strong> {selectedAccount.branch_name}
             </p>
           )}
           {selectedAccount.instructions && (
-            <p className="mt-2 text-xs text-default-500 italic">
+            <p className="mt-1 text-xs text-default-500 italic">
               <strong>Instructions:</strong> {selectedAccount.instructions}
             </p>
           )}
@@ -149,27 +155,47 @@ export default function BankTransferSection({
 
       {/* Upload Payment Receipt Dropzone */}
       <div>
-        <p className="font-medium mb-3">Upload Payment Receipt</p>
-        <label className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer bg-default-50 hover:bg-default-100 transition-colors overflow-hidden">
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <Upload className="w-12 h-12 text-default-400 mb-4" />
-            <p className="mb-2 text-sm text-default-600">
-              <span className="font-semibold">Click to upload</span> or drag and drop
-            </p>
-            <p className="text-xs text-default-500">Image or PDF</p>
-          </div>
+        <p className="font-medium text-sm mb-2">Upload Payment Receipt</p>
+        <label className={`relative flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl cursor-pointer transition-all overflow-hidden ${
+          file
+            ? "border-success-400 bg-success-50/20 dark:bg-success-950/20"
+            : "border-default-300 hover:border-primary bg-default-50 hover:bg-default-100 dark:bg-default-50/5"
+        }`}>
+          {!file ? (
+            <div className="flex flex-col items-center justify-center p-4 text-center">
+              <Upload className="w-9 h-9 text-primary/80 mb-2" />
+              <p className="text-sm text-default-700 font-medium mb-0.5">
+                <span className="text-primary font-semibold">Click to upload receipt</span> or drag and drop
+              </p>
+              <p className="text-xs text-default-400">JPG, PNG or PDF (Max 10MB)</p>
+            </div>
+          ) : (
+            <div className="relative w-full h-full p-3 flex items-center gap-4 bg-content1/90 backdrop-blur-sm">
+              {preview && file.type.startsWith("image/") ? (
+                <img
+                  src={preview}
+                  alt="Receipt Preview"
+                  className="w-24 h-full object-cover rounded-lg border border-default-200 shadow-sm"
+                />
+              ) : (
+                <div className="w-24 h-full bg-default-200/50 rounded-lg flex flex-col items-center justify-center text-default-600">
+                  <FileText className="w-8 h-8 mb-1 text-primary" />
+                  <span className="text-[10px] font-bold uppercase">PDF File</span>
+                </div>
+              )}
 
-          {preview && file?.type.startsWith("image/") && (
-            <img
-              src={preview}
-              alt="Preview"
-              className="absolute inset-0 w-full h-full object-contain p-2 bg-default-100/50 rounded-xl"
-            />
-          )}
-
-          {file && !file.type.startsWith("image/") && (
-            <div className="absolute inset-0 flex items-center justify-center bg-default-100/80 rounded-xl">
-              <p className="text-default-700 font-medium">PDF: {file.name}</p>
+              <div className="flex-1 min-w-0 pr-2">
+                <div className="flex items-center gap-1.5 text-success font-semibold text-xs md:text-sm mb-1">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>Receipt Attached</span>
+                </div>
+                <p className="text-xs font-medium text-foreground truncate">{file.name}</p>
+                <p className="text-[11px] text-default-400 mt-0.5">{formatFileSize(file.size)}</p>
+                <div className="mt-2 flex items-center gap-1 text-xs text-primary font-medium hover:underline">
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Click to change file</span>
+                </div>
+              </div>
             </div>
           )}
 

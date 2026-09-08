@@ -8,11 +8,11 @@ import {
 import { Image } from "@heroui/image";
 import { Button } from "@heroui/button";
 import { Skeleton } from "@heroui/skeleton";
-import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
 import { Tabs, Tab } from "@heroui/tabs";
 import { RadioGroup, Radio } from "@heroui/radio";
 import { Chip } from "@heroui/chip";
-import { Upload, CheckCircle, Banknote, Building2 } from "lucide-react";
+import { Upload, CheckCircle, Banknote, Building2, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/lib/useAuth";
 import BankTransferSection from "@/components/BankTransferSection";
@@ -32,6 +32,10 @@ export default function LessonStorePage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+
+  // Details modal states
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedDetailsClass, setSelectedDetailsClass] = useState<any>(null);
 
   // Pending & approved class IDs
   const [pendingClassIds, setPendingClassIds] = useState<number[]>([]);
@@ -176,6 +180,11 @@ export default function LessonStorePage() {
     }
   };
 
+  const openClassDetails = (cls: any) => {
+    setSelectedDetailsClass(cls);
+    setIsDetailsModalOpen(true);
+  };
+
   const enrollInClass = async (cls: any) => {
     const classId = cls.class_id || cls.id;
 
@@ -235,7 +244,7 @@ export default function LessonStorePage() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {[...Array(8)].map((_, i) => (
-            <Card key={i} className="relative w-full h-[400px] overflow-hidden">
+            <Card key={i} className="relative w-full h-[420px] overflow-hidden">
               <Skeleton className="w-full h-full rounded-lg" />
               <CardFooter className="absolute bg-white/30 backdrop-blur-md bottom-0 border-t-1 border-zinc-100/50 z-10 w-full">
                 <div className="flex flex-col gap-1 w-full px-4 py-3">
@@ -258,7 +267,7 @@ export default function LessonStorePage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 items-stretch">
           {classes.map((cls: any) => {
             const classId = cls.class_id || cls.id;
             const isPending = pendingClassIds.includes(classId);
@@ -267,9 +276,9 @@ export default function LessonStorePage() {
             return (
               <Card
                 key={classId}
-                className={`relative w-full h-[400px] overflow-hidden shadow-xl transition-transform ${
+                className={`relative w-full h-[420px] overflow-hidden shadow-xl flex flex-col justify-between transition-transform ${
                   !isPending && !isApproved ? "hover:scale-[1.02]" : ""
-                } ${isPending ? "opacity-75" : ""}`}
+                } ${isPending ? "opacity-80" : ""}`}
               >
                 {cls.class_imageurl || cls.image_url ? (
                   <Image
@@ -284,7 +293,7 @@ export default function LessonStorePage() {
                   </div>
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent z-10" />
 
                 {/* Purchased / Enrolled badge */}
                 {isApproved && (
@@ -310,44 +319,55 @@ export default function LessonStorePage() {
                   </div>
                 )}
 
-                <CardFooter className="absolute bg-white/30 backdrop-blur-md bottom-0 border-t-1 border-zinc-100/50 z-20 w-full">
-                  <div className="flex flex-col gap-1 w-full px-4 py-3">
-                    <h4 className={`font-semibold text-2xl drop-shadow-lg ${isPending ? "text-white/70" : "text-white"}`}>
+                <CardFooter className="absolute bg-black/65 backdrop-blur-md bottom-0 border-t border-white/10 z-20 w-full p-4">
+                  <div className="flex flex-col gap-2 w-full">
+                    <h4 className={`font-bold text-lg leading-tight line-clamp-2 drop-shadow-md ${isPending ? "text-white/70" : "text-white"}`}>
                       {cls.class_title || "Untitled Class"}
                     </h4>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className={`text-lg font-bold drop-shadow ${isPending ? "text-white/70" : "text-white"}`}>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <p className={`text-base font-bold drop-shadow ${isPending ? "text-white/70" : "text-white"}`}>
                           Rs {cls.class_price || 0}
                         </p>
-                        <p className="text-white/80 text-sm">
-                          {cls.batch || ""}
-                          {cls.class_type ? ` • ${cls.class_type}` : ""}
-                          {cls.renew_type ? ` • ${cls.renew_type}` : ""}
-                        </p>
-                        <p className="text-white/70 text-xs mt-1 line-clamp-2">
-                          {cls.class_description || "No description available"}
-                        </p>
+                        <span className="text-white/70 text-xs font-medium bg-white/10 px-2 py-0.5 rounded-md">
+                          {cls.batch || ""} {cls.class_type ? `• ${cls.class_type}` : ""}
+                        </span>
                       </div>
+                      <p className="text-white/70 text-xs mt-1 line-clamp-2 leading-relaxed">
+                        {cls.class_description || "No description available"}
+                      </p>
+                    </div>
+
+                    {/* Leveled Action Buttons Row */}
+                    <div className="flex items-center gap-2 pt-2 mt-auto w-full">
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        startContent={<Info className="w-3.5 h-3.5" />}
+                        className="flex-1 text-white bg-white/20 hover:bg-white/30 backdrop-blur-md text-xs font-medium"
+                        onPress={() => openClassDetails(cls)}
+                      >
+                        View Details
+                      </Button>
+
                       {isApproved ? (
                         <Button
                           color="success"
-                          radius="full"
                           size="sm"
-                          className="text-white font-semibold"
+                          className="flex-1 text-white font-semibold text-xs shadow-md"
                           onPress={() => router.push("/myClasses")}
                         >
                           Go to Class
                         </Button>
                       ) : isPending ? (
-                        <Button color="default" radius="full" size="sm" isDisabled>
-                          Pending Approval
+                        <Button color="default" size="sm" className="flex-1 text-xs" isDisabled>
+                          Pending
                         </Button>
                       ) : (
                         <Button
                           color="primary"
-                          radius="full"
                           size="sm"
+                          className="flex-1 text-xs font-semibold shadow-md"
                           onPress={() => enrollInClass(cls)}
                         >
                           Enroll Now
@@ -362,27 +382,117 @@ export default function LessonStorePage() {
         </div>
       )}
 
-      {/* Payment Modal (unchanged from previous version) */}
+      {/* Class Details Modal */}
+      <Modal
+        backdrop="blur"
+        isOpen={isDetailsModalOpen}
+        onOpenChange={(open) => setIsDetailsModalOpen(open)}
+        size="2xl"
+        scrollBehavior="inside"
+        classNames={{
+          base: "bg-content1 max-h-[90vh]",
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 border-b border-default-100">
+                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Class Details</span>
+                <h2 className="text-2xl font-bold">{selectedDetailsClass?.class_title}</h2>
+              </ModalHeader>
+              <ModalBody className="py-5">
+                {selectedDetailsClass && (
+                  <div className="flex flex-col gap-5">
+                    {/* Image banner */}
+                    {selectedDetailsClass.class_imageurl || selectedDetailsClass.image_url ? (
+                      <div className="w-full h-56 rounded-xl overflow-hidden shadow-md">
+                        <img
+                          src={selectedDetailsClass.class_imageurl || selectedDetailsClass.image_url}
+                          alt={selectedDetailsClass.class_title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : null}
+
+                    {/* Specs & Pricing */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-default-100 dark:bg-default-50/5 border border-default-200/50">
+                      <div>
+                        <p className="text-xs text-default-500 font-medium">Price</p>
+                        <p className="text-2xl font-extrabold text-primary">Rs {selectedDetailsClass.class_price || 0}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {selectedDetailsClass.batch && (
+                          <Chip color="primary" variant="flat" size="sm" className="font-semibold">
+                            Batch: {selectedDetailsClass.batch}
+                          </Chip>
+                        )}
+                        {selectedDetailsClass.class_type && (
+                          <Chip color="secondary" variant="flat" size="sm" className="font-semibold capitalize">
+                            {selectedDetailsClass.class_type}
+                          </Chip>
+                        )}
+                        {selectedDetailsClass.renew_type && (
+                          <Chip color="default" variant="flat" size="sm" className="font-semibold capitalize">
+                            {selectedDetailsClass.renew_type}
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-default-700 mb-2">Description & Syllabus</h4>
+                      <div className="p-4 rounded-xl bg-default-50 dark:bg-default-50/5 text-default-700 text-sm leading-relaxed whitespace-pre-line border border-default-200/40 max-h-60 overflow-y-auto">
+                        {selectedDetailsClass.class_description || "No detailed description provided."}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter className="border-t border-default-100">
+                <Button variant="flat" onPress={onClose}>
+                  Close
+                </Button>
+                {selectedDetailsClass && !approvedClassIds.includes(selectedDetailsClass.class_id || selectedDetailsClass.id) && (
+                  <Button
+                    color="primary"
+                    className="font-semibold shadow-md"
+                    onPress={() => {
+                      onClose();
+                      enrollInClass(selectedDetailsClass);
+                    }}
+                  >
+                    Enroll Now
+                  </Button>
+                )}
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Payment Modal */}
       <Modal
         backdrop="blur"
         isOpen={isPaymentModalOpen}
         onOpenChange={handleModalClose}
-        size="lg"
+        size="xl"
+        scrollBehavior="inside"
         classNames={{
-          base: "bg-content1",
+          base: "bg-content1 max-h-[90vh]",
         }}
       >
         <ModalContent>
           <>
-            <ModalHeader className="flex flex-col gap-1">
-              <h2 className="text-2xl font-bold">Payment</h2>
+            <ModalHeader className="flex flex-col gap-1 border-b border-default-100">
+              <h2 className="text-2xl font-bold">Complete Payment</h2>
               {selectedClass && (
-                <p className="text-default-500 text-medium">
-                  {selectedClass.class_title} - Rs. {selectedClass.class_price}
+                <p className="text-default-500 text-sm font-medium">
+                  {selectedClass.class_title} • <span className="text-primary font-bold">Rs. {selectedClass.class_price}</span>
                 </p>
               )}
             </ModalHeader>
-            <ModalBody>
+            <ModalBody className="py-4">
               {paymentSubmitted ? (
                 <div className="flex flex-col items-center justify-center gap-6 py-10 text-center">
                   <CheckCircle className="w-24 h-24 text-success" />
@@ -403,11 +513,7 @@ export default function LessonStorePage() {
                 </div>
               ) : (
                 selectedClass && (
-                  <div className="flex flex-col gap-6">
-                    <div className="text-center">
-                      <p className="text-default-600">{selectedClass.class_description}</p>
-                    </div>
-
+                  <div className="flex flex-col gap-4">
                     <Tabs aria-label="Payment methods" defaultSelectedKey="bank" className="w-full">
                       <Tab
                         key="bank"
@@ -418,7 +524,7 @@ export default function LessonStorePage() {
                           </div>
                         }
                       >
-                        <div className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-5 pt-2">
                           <BankTransferSection
                             bankChoice={bankChoice}
                             setBankChoice={setBankChoice}
@@ -435,6 +541,7 @@ export default function LessonStorePage() {
                             onPress={handlePaymentSubmit}
                             isDisabled={!file}
                             fullWidth
+                            className="font-semibold shadow-md"
                           >
                             {uploading ? "Uploading Receipt..." : "Submit Payment"}
                           </Button>

@@ -11,6 +11,7 @@ import { Button } from "@heroui/button";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
 import { Skeleton } from "@heroui/skeleton";
 import { Chip } from "@heroui/chip";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
 import { VerticalDotsIcon } from "@/components/admin/icons"; // Adjust path
 import Link from "next/link";
 import {
@@ -22,6 +23,7 @@ import {
   UserRound,
   ArrowUp,
   ArrowDown,
+  Info,
 } from "lucide-react";
 import { useConfirm } from "@/components/admin/GlobalConfirm";
 
@@ -30,7 +32,10 @@ export default function ClassListPage() {
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [reordering, setReordering] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedDetailsClass, setSelectedDetailsClass] = useState<any>(null);
   const confirm = useConfirm();
+
   useEffect(() => {
     fetchClasses();
   }, []);
@@ -117,6 +122,11 @@ export default function ClassListPage() {
     if (!confirmed) return;
   };
 
+  const openClassDetails = (cls: any) => {
+    setSelectedDetailsClass(cls);
+    setIsDetailsModalOpen(true);
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-8">
@@ -131,7 +141,7 @@ export default function ClassListPage() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="relative w-full h-[400px] overflow-hidden">
+            <Card key={i} className="relative w-full h-[420px] overflow-hidden">
               <Skeleton className="w-full h-full rounded-lg" />
               <CardFooter className="absolute bg-white/30 backdrop-blur-md bottom-0 border-t-1 border-zinc-100/50 z-10 w-full">
                 <div className="flex flex-col gap-1 w-full px-4 py-3">
@@ -173,12 +183,12 @@ export default function ClassListPage() {
                   </Chip>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
                   {batchClasses.map((cls: any) => {
                     const originalIndex = classes.findIndex((c) => (c.id || c.class_id) === (cls.id || cls.class_id));
 
                     return (
-                      <Card key={cls.id || cls.class_id} className="relative w-full h-[400px] overflow-hidden shadow-xl">
+                      <Card key={cls.id || cls.class_id} className="relative w-full h-[420px] overflow-hidden shadow-xl flex flex-col justify-between">
                         {/* Background Image */}
                         {cls.class_imageurl ? (
                           <Image
@@ -193,8 +203,8 @@ export default function ClassListPage() {
                           </div>
                         )}
 
-                        {/* Dark overlay for better text visibility */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10" />
+                        {/* Dark overlay for text visibility */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent z-10" />
 
                         {/* Reorder Buttons - Top Left Corner */}
                         <div className="absolute top-3 left-3 z-30 flex gap-1">
@@ -202,7 +212,7 @@ export default function ClassListPage() {
                             isIconOnly
                             size="sm"
                             variant="bordered"
-                            className="border-white/30 bg-black/40 text-white hover:bg-black/60"
+                            className="border-white/30 bg-black/40 text-white hover:bg-black/60 backdrop-blur-sm"
                             isDisabled={originalIndex === 0 || reordering}
                             onPress={() => handleMoveClass(originalIndex, "up")}
                             title="Move class left/up"
@@ -213,7 +223,7 @@ export default function ClassListPage() {
                             isIconOnly
                             size="sm"
                             variant="bordered"
-                            className="border-white/30 bg-black/40 text-white hover:bg-black/60"
+                            className="border-white/30 bg-black/40 text-white hover:bg-black/60 backdrop-blur-sm"
                             isDisabled={originalIndex === classes.length - 1 || reordering}
                             onPress={() => handleMoveClass(originalIndex, "down")}
                             title="Move class right/down"
@@ -226,7 +236,7 @@ export default function ClassListPage() {
                         <div className="absolute top-3 right-3 z-30">
                           <Dropdown>
                             <DropdownTrigger>
-                              <Button isIconOnly size="sm" variant="bordered" className="border-white/30 bg-white/10">
+                              <Button isIconOnly size="sm" variant="bordered" className="border-white/30 bg-black/40 text-white hover:bg-black/60 backdrop-blur-sm">
                                 <VerticalDotsIcon className="w-5 h-5 text-white" />
                               </Button>
                             </DropdownTrigger>
@@ -274,32 +284,45 @@ export default function ClassListPage() {
                           </Dropdown>
                         </div>
 
-                        {/* Footer with Class Details */}
-                        <CardFooter className="absolute bg-white/30 backdrop-blur-md bottom-0 border-t-1 border-zinc-100/50 z-20 w-full">
-                          <div className="flex flex-col gap-1 w-full px-4 py-3">
-                            <h4 className="text-white font-semibold text-2xl drop-shadow-lg">
+                        {/* Footer with Class Details & Action Buttons */}
+                        <CardFooter className="absolute bg-black/65 backdrop-blur-md bottom-0 border-t border-white/10 z-20 w-full p-4">
+                          <div className="flex flex-col gap-2 w-full">
+                            <h4 className="text-white font-bold text-lg leading-tight line-clamp-2 drop-shadow-md">
                               {cls.class_title}
                             </h4>
 
-                            <div className="flex justify-between items-end">
-                              <div>
-                                <p className="text-white text-lg font-bold drop-shadow">
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <p className="text-white text-base font-bold drop-shadow">
                                   Rs {cls.class_price}
                                 </p>
-                                <p className="text-white/80 text-sm">
-                                  {cls.batch} • {cls.class_type} • {cls.renew_type}
-                                </p>
-                                <p className="text-white/70 text-xs mt-1">
-                                  {cls.class_description || "No description available"}
-                                </p>
+                                <span className="text-white/70 text-xs font-medium bg-white/10 px-2 py-0.5 rounded-md">
+                                  {cls.batch} • {cls.class_type}
+                                </span>
                               </div>
+                              <p className="text-white/70 text-xs mt-1 line-clamp-2 leading-relaxed">
+                                {cls.class_description || "No description available"}
+                              </p>
+                            </div>
+
+                            {/* Leveled Buttons Action Row */}
+                            <div className="flex items-center gap-2 pt-2 mt-auto w-full">
                               <Button
-                                className="text-tiny font-medium"
-                                color="primary"
-                                radius="full"
                                 size="sm"
+                                variant="flat"
+                                startContent={<Info className="w-3.5 h-3.5" />}
+                                className="flex-1 text-white bg-white/20 hover:bg-white/30 backdrop-blur-md text-xs font-medium"
+                                onPress={() => openClassDetails(cls)}
                               >
-                                Enroll Now
+                                View Details
+                              </Button>
+                              <Button
+                                size="sm"
+                                color="primary"
+                                className="flex-1 text-xs font-semibold shadow-md"
+                                onPress={() => router.push(`/admin/classes/edit/${cls.class_id}`)}
+                              >
+                                Edit Class
                               </Button>
                             </div>
                           </div>
@@ -313,6 +336,95 @@ export default function ClassListPage() {
           </div>
         );
       })()}
+
+      {/* Class Details Modal */}
+      <Modal
+        backdrop="blur"
+        isOpen={isDetailsModalOpen}
+        onOpenChange={(open) => setIsDetailsModalOpen(open)}
+        size="2xl"
+        scrollBehavior="inside"
+        classNames={{
+          base: "bg-content1 max-h-[90vh]",
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 border-b border-default-100">
+                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Class Details</span>
+                <h2 className="text-2xl font-bold">{selectedDetailsClass?.class_title}</h2>
+              </ModalHeader>
+              <ModalBody className="py-5">
+                {selectedDetailsClass && (
+                  <div className="flex flex-col gap-5">
+                    {/* Image banner */}
+                    {selectedDetailsClass.class_imageurl ? (
+                      <div className="w-full h-56 rounded-xl overflow-hidden shadow-md">
+                        <img
+                          src={selectedDetailsClass.class_imageurl}
+                          alt={selectedDetailsClass.class_title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : null}
+
+                    {/* Specs & Pricing */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-default-100 dark:bg-default-50/5 border border-default-200/50">
+                      <div>
+                        <p className="text-xs text-default-500 font-medium">Price</p>
+                        <p className="text-2xl font-extrabold text-primary">Rs {selectedDetailsClass.class_price || 0}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {selectedDetailsClass.batch && (
+                          <Chip color="primary" variant="flat" size="sm" className="font-semibold">
+                            Batch: {selectedDetailsClass.batch}
+                          </Chip>
+                        )}
+                        {selectedDetailsClass.class_type && (
+                          <Chip color="secondary" variant="flat" size="sm" className="font-semibold capitalize">
+                            {selectedDetailsClass.class_type}
+                          </Chip>
+                        )}
+                        {selectedDetailsClass.renew_type && (
+                          <Chip color="default" variant="flat" size="sm" className="font-semibold capitalize">
+                            {selectedDetailsClass.renew_type}
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-default-700 mb-2">Description & Syllabus</h4>
+                      <div className="p-4 rounded-xl bg-default-50 dark:bg-default-50/5 text-default-700 text-sm leading-relaxed whitespace-pre-line border border-default-200/40 max-h-60 overflow-y-auto">
+                        {selectedDetailsClass.class_description || "No detailed description provided."}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter className="border-t border-default-100">
+                <Button variant="flat" onPress={onClose}>
+                  Close
+                </Button>
+                {selectedDetailsClass && (
+                  <Button
+                    color="primary"
+                    className="font-semibold shadow-md"
+                    onPress={() => {
+                      onClose();
+                      router.push(`/admin/classes/edit/${selectedDetailsClass.class_id}`);
+                    }}
+                  >
+                    Edit Class
+                  </Button>
+                )}
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

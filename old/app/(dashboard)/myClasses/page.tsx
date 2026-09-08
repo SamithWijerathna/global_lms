@@ -332,7 +332,7 @@ function MaterialViewer({
                 <video
                   ref={videoRef}
                   controls
-                  controlsList="nodownload nofullscreen noplaybackrate"
+                  controlsList="nodownload nofullscreen"
                   disablePictureInPicture
                   className="absolute inset-0 h-full w-full"
                   preload="metadata"
@@ -978,11 +978,22 @@ export default function MyLessonPage() {
         backdrop="blur"
         isOpen={isPaymentModalOpen}
         onOpenChange={handleModalClose}
-        size="lg"
+        size="xl"
+        scrollBehavior="inside"
+        classNames={{
+          base: "bg-content1 max-h-[90vh]",
+        }}
       >
         <ModalContent>
-          <ModalHeader>Renew Class Payment</ModalHeader>
-          <ModalBody>
+          <ModalHeader className="flex flex-col gap-1 border-b border-default-100">
+            <h2 className="text-2xl font-bold">Renew Class Payment</h2>
+            {paymentClass && (
+              <p className="text-default-500 text-sm font-medium">
+                {paymentClass.class_title} • <span className="text-primary font-bold">Rs. {paymentClass.class_price}</span>
+              </p>
+            )}
+          </ModalHeader>
+          <ModalBody className="py-4">
             {paymentSubmitted ? (
               <div className="flex flex-col items-center justify-center gap-6 py-12 text-center">
                 <CheckCircle className="h-24 w-24 text-success" />
@@ -996,18 +1007,7 @@ export default function MyLessonPage() {
               </div>
             ) : (
               paymentClass && (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h3 className="text-xl font-semibold">
-                      {paymentClass.class_title}
-                    </h3>
-                    <p className="text-default-600">
-                      Rs. {paymentClass.class_price}
-                    </p>
-                    <p className="text-default-600 mt-2">
-                      {paymentClass.class_description}
-                    </p>
-                  </div>
+                <div className="space-y-4">
                   <Tabs fullWidth defaultSelectedKey="bank">
                     <Tab
                       key="bank"
