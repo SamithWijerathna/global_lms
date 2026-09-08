@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Gauge, Settings } from "lucide-react";
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
+import { useAuth } from "@/src/lib/useAuth";
 
 export function getYouTubeId(url: string): string | null {
   if (!url) return null;
@@ -62,7 +64,9 @@ const QUALITY_LABELS: Record<string, string> = {
 
 export default function ProtectedYouTubePlayer({ url, watermarkText, className = "" }: ProtectedYouTubePlayerProps) {
   const { user } = useAuth();
-  const displayWatermark = watermarkText || (user?.student_id ? `Lashinigeo - ${user.student_id}` : "Lashinigeo Protected");
+  const { settings } = useSystemSettings();
+  const brandName = settings.site_short_name || settings.site_title || "LMS";
+  const displayWatermark = watermarkText || (user?.student_id ? `${brandName} - ${user.student_id}` : `${brandName} Protected`);
   const videoId = getYouTubeId(url);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);

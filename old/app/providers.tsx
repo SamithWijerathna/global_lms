@@ -20,12 +20,16 @@ declare module "@react-types/shared" {
   }
 }
 
+import { SystemSettingsProvider } from "@/src/lib/useSystemSettings";
+
 export function Providers({ children, themeProps }: ProvidersProps) {
   const router = useRouter();
 
   return (
     <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider {...themeProps}>{children}</NextThemesProvider>
+      <NextThemesProvider {...themeProps}>
+        <SystemSettingsProvider>{children}</SystemSettingsProvider>
+      </NextThemesProvider>
     </HeroUIProvider>
   );
 }

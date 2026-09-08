@@ -7,8 +7,10 @@ import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Checkbox } from "@heroui/checkbox";
 import { Link } from "@heroui/link";
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
 
 export default function AdminLoginPage() {
+  const { settings } = useSystemSettings();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -45,9 +47,17 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-indigo-200 to-white dark:from-gray-800 dark:via-indigo-900 dark:to-black">
       <Card className="w-full max-w-md p-8 shadow-2xl">
         <CardHeader className="flex flex-col items-center pb-6">
-          <h1 className="text-4xl font-bold">Admin Portal</h1>
-          <p className="text-default-600 mt-2">
-            Secure access to LMS Dashboard
+          <img
+            src={settings.site_logo_url || "/assets/logo.png"}
+            alt={settings.site_title || "Logo"}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/assets/logo.png";
+            }}
+            className="w-28 h-auto max-h-24 object-contain mb-3 filter dark:brightness-0 dark:invert drop-shadow-md"
+          />
+          <h1 className="text-3xl font-bold text-center">{settings.site_short_name || "Admin"} Portal</h1>
+          <p className="text-default-600 mt-1 text-sm text-center">
+            Secure access to {settings.site_title || "LMS"} Admin
           </p>
         </CardHeader>
 

@@ -5,8 +5,11 @@ import {Button, Input, Checkbox, Link, Form, Divider} from "@heroui/react";
 import {Icon} from "@iconify/react";
 import {useRouter} from "next/navigation";
 
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
+
 export default function LoginPage() {
   const router = useRouter();
+  const { settings } = useSystemSettings();
   const [isVisible, setIsVisible] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -67,13 +70,18 @@ export default function LoginPage() {
 
       <div className="rounded-large bg-content1 shadow-small flex w-full max-w-md flex-col gap-4 px-8 pt-8 pb-10 relative z-10 items-center">
         <img
-          src="/assets/logo.png"
-          alt="Lashinigeo Logo"
+          src={settings.site_logo_url || "/assets/logo.png"}
+          alt={settings.site_title || "Logo"}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/assets/logo.png";
+          }}
           className="w-44 h-auto max-h-28 sm:w-52 sm:max-h-32 object-contain mb-2 filter dark:brightness-0 dark:invert transition-all drop-shadow-md"
         />
         <div className="flex flex-col gap-1 text-center w-full">
           <h1 className="text-xl font-semibold">Sign in to your account</h1>
-          <p className="text-small text-default-500">to continue to Lashinigeo</p>
+          <p className="text-small text-default-500">
+            to continue to {settings.site_short_name || settings.site_title || "LMS"}
+          </p>
         </div>
 
         {error && (

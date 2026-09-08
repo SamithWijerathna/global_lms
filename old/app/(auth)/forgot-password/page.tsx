@@ -4,9 +4,11 @@ import React, { useState } from "react";
 import { Button, Input, Link, Form } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const { settings } = useSystemSettings();
 
   const [step, setStep] = useState<"email" | "otp" | "reset">("email");
   const [email, setEmail] = useState("");
@@ -144,13 +146,18 @@ export default function ForgotPasswordPage() {
 
       <div className="rounded-large bg-content1 shadow-small flex w-full max-w-md flex-col gap-4 px-8 pt-8 pb-10 relative z-10 items-center">
         <img
-          src="/assets/logo.png"
-          alt="Lashinigeo Logo"
+          src={settings.site_logo_url || "/assets/logo.png"}
+          alt={settings.site_title || "Logo"}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/assets/logo.png";
+          }}
           className="w-44 h-auto max-h-28 sm:w-52 sm:max-h-32 object-contain mb-1 filter dark:brightness-0 dark:invert transition-all drop-shadow-md"
         />
         <div className="flex flex-col gap-1 text-center w-full">
           <h1 className="text-xl font-semibold">Reset Password</h1>
-          <p className="text-small text-default-500">to continue to Lashinigeo</p>
+          <p className="text-small text-default-500">
+            to continue to {settings.site_short_name || settings.site_title || "LMS"}
+          </p>
         </div>
 
         <p className="text-small text-default-500 text-center">

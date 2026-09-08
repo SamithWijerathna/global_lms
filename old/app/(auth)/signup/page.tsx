@@ -19,6 +19,7 @@ import {
   useDisclosure,
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
 
 // Dynamic batches loaded from /api/batches
 
@@ -81,6 +82,7 @@ const isValidSLPhone = (phone: string) =>
 
 export default function Signup() {
   const router = useRouter();
+  const { settings } = useSystemSettings();
   const [step, setStep] = React.useState(1);
   const [otp, setOtp] = React.useState("");
   const [profilePreview, setProfilePreview] = React.useState<string | null>(null);
@@ -253,8 +255,11 @@ export default function Signup() {
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-gradient-animate">
       <div className="rounded-large bg-content1 shadow-small w-full max-w-xl px-8 py-8 items-center flex flex-col relative z-10">
         <img
-          src="/assets/logo.png"
-          alt="Lashinigeo Logo"
+          src={settings.site_logo_url || "/assets/logo.png"}
+          alt={settings.site_title || "Logo"}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/assets/logo.png";
+          }}
           className="w-44 h-auto max-h-28 sm:w-56 sm:max-h-36 object-contain mb-3 mx-auto filter dark:brightness-0 dark:invert transition-all drop-shadow-md"
         />
         <h1 className="text-3xl font-semibold mb-4 text-center">Create Account</h1>

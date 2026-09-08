@@ -7,11 +7,14 @@ import { getDBConnection } from "../db";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 
+import { getSystemSettingsServer } from "@/src/lib/getSystemSettings";
+
 const resend = new Resend(process.env.RESEND_API_KEY);
-const getResendFrom = () => process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM || "Lashinigeo <noreply@test.cloudwave.asia>";
-const getAppLogoUrl = () => {
+const getResendFrom = (name?: string) => process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM || `${name || "Lashinigeo"} <noreply@test.cloudwave.asia>`;
+const getAppLogoUrl = (logoPath?: string) => {
+  if (logoPath && logoPath.startsWith("http")) return logoPath;
   const baseUrl = process.env.APP_URL || "https://lashinigeo.lk";
-  return `${baseUrl.replace(/\/$/, "")}/assets/logo.png`;
+  return `${baseUrl.replace(/\/$/, "")}${logoPath || "/assets/logo.png"}`;
 };
 
 // ==================== GET - Fetch user(s) ====================
@@ -228,17 +231,18 @@ export async function POST(req: Request) {
         [email, code, expires, code, expires]
       );
       try {
+        const sysSettings = await getSystemSettingsServer();
         await resend.emails.send({
-          from: getResendFrom(),
+          from: getResendFrom(sysSettings.site_short_name || sysSettings.site_title),
           to: email,
-          subject: "🔐 Your Lashinigeo OTP Code",
+          subject: `🔐 Your ${sysSettings.site_short_name || "OTP"} Verification Code`,
           html: `
             <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f8f6; padding: 40px 15px; text-align: center;">
               <div style="background: #ffffff; max-width: 480px; margin: 0 auto; padding: 36px 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(7, 56, 62, 0.08); border: 1px solid #e5efe9;">
                 <div style="margin-bottom: 24px;">
-                  <img src="${getAppLogoUrl()}" alt="Lashinigeo" style="max-height: 52px; width: auto; display: inline-block;" />
+                  <img src="${getAppLogoUrl(sysSettings.site_logo_url)}" alt="${sysSettings.site_title}" style="max-height: 52px; width: auto; display: inline-block;" />
                 </div>
-                <h2 style="color: #07383E; font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">Lashinigeo Verification</h2>
+                <h2 style="color: #07383E; font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">${sysSettings.site_title} Verification</h2>
                 <p style="color: #38605c; font-size: 15px; line-height: 1.5; margin-bottom: 28px;">
                   Use the following One-Time Password (OTP) to verify your account. This code will expire in <b>10 minutes</b>.
                 </p>
@@ -250,7 +254,7 @@ export async function POST(req: Request) {
                 </p>
                 <hr style="border: none; border-top: 1px solid #e8f2ec; margin: 28px 0;" />
                 <p style="font-size: 12px; color: #8aa8a3; margin-bottom: 6px;">
-                  © ${new Date().getFullYear()} Lashinigeo. All rights reserved.
+                  ${sysSettings.copyright_text}
                 </p>
                 <p style="font-size: 12px; color: #8aa8a3; margin: 0;">
                   Developed and Maintained by <a href="https://cloudwave.asia" target="_blank" style="color: #07383E; text-decoration: none; font-weight: 600;">CloudWave.asia</a>
@@ -492,19 +496,20 @@ export async function POST(req: Request) {
         [email, code, expires, code, expires]
       );
       try {
+        const sysSettings = await getSystemSettingsServer();
         await resend.emails.send({
-          from: getResendFrom(),
+          from: getResendFrom(sysSettings.site_short_name || sysSettings.site_title),
           to: email,
-          subject: "🔐 Reset Your Lashinigeo Password",
+          subject: `🔐 Reset Your ${sysSettings.site_title} Password`,
           html: `
             <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f8f6; padding: 40px 15px; text-align: center;">
               <div style="background: #ffffff; max-width: 480px; margin: 0 auto; padding: 36px 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(7, 56, 62, 0.08); border: 1px solid #e5efe9;">
                 <div style="margin-bottom: 24px;">
-                  <img src="${getAppLogoUrl()}" alt="Lashinigeo" style="max-height: 52px; width: auto; display: inline-block;" />
+                  <img src="${getAppLogoUrl(sysSettings.site_logo_url)}" alt="${sysSettings.site_title}" style="max-height: 52px; width: auto; display: inline-block;" />
                 </div>
                 <h2 style="color: #07383E; font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">Password Reset Request</h2>
                 <p style="color: #38605c; font-size: 15px; line-height: 1.5; margin-bottom: 28px;">
-                  We received a request to reset your Lashinigeo password. Use the code below to set a new password.
+                  We received a request to reset your ${sysSettings.site_title} password. Use the code below to set a new password.
                 </p>
                 <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #07383E; background: #eef8f2; display: inline-block; padding: 14px 28px; border-radius: 12px; border: 1px solid #66D47E; margin-bottom: 24px;">
                   ${code}
@@ -517,7 +522,7 @@ export async function POST(req: Request) {
                 </p>
                 <hr style="border: none; border-top: 1px solid #e8f2ec; margin: 28px 0;" />
                 <p style="font-size: 12px; color: #8aa8a3; margin-bottom: 6px;">
-                  © ${new Date().getFullYear()} Lashinigeo. All rights reserved.
+                  ${sysSettings.copyright_text}
                 </p>
                 <p style="font-size: 12px; color: #8aa8a3; margin: 0;">
                   Developed and Maintained by <a href="https://cloudwave.asia" target="_blank" style="color: #07383E; text-decoration: none; font-weight: 600;">CloudWave.asia</a>

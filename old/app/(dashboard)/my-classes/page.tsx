@@ -76,9 +76,7 @@ function MaterialViewer({
   let playStart = 0;
   const THRESHOLD_SECONDS = 180; // 3 minutes of actual playback = 1 view count
 
-  const watermarkText = user?.student_id
-    ? `Lashinigeo - ${user.student_id}`
-    : "Lashinigeo Protected";
+  const watermarkText = undefined;
 
   const pdfParams = material.pdf_downloadable
     ? ""

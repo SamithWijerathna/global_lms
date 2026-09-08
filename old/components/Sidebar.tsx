@@ -53,21 +53,29 @@ const settingsItems = [
   { name: "Payment History", href: "/settings/payment-history", icon: <FileText className="size-4" /> },
 ];
 
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
+
 function BrandHeader() {
   const { state } = useAnimatedSidebar();
+  const { settings } = useSystemSettings();
   const collapsed = state === "collapsed";
+  const logoUrl = settings.site_logo_url || "/assets/logo.png";
+  const title = settings.site_title || "LASHINIGEO LMS";
 
   return (
     <div className="flex items-center gap-2 px-2 py-1">
       <Link href="/dashboard" className="flex items-center gap-2.5 overflow-hidden font-semibold">
         <img
-          src="/assets/logo.png"
-          alt="Logo"
+          src={logoUrl}
+          alt={title}
           className="size-7 shrink-0 object-contain filter dark:brightness-0 dark:invert"
+          onError={(e: any) => {
+            e.target.src = "/assets/logo.png";
+          }}
         />
         {!collapsed && (
           <span className="text-sm font-semibold tracking-tight whitespace-nowrap text-foreground">
-            LASHINIGEO LMS
+            {title}
           </span>
         )}
       </Link>

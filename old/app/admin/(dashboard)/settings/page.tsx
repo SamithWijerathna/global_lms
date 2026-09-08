@@ -38,6 +38,7 @@ import {
 } from "@heroui/modal";
 
 import { useAdminAuth } from "@/src/lib/useAdminAuth";
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -82,6 +83,66 @@ function SettingsContent() {
 
   // Theme state
   const [isDark, setIsDark] = useState(false);
+
+  // White Labeling & Branding states
+  const { settings, refetchSettings } = useSystemSettings();
+  const [brandingForm, setBrandingForm] = useState({
+    site_title: "",
+    site_short_name: "",
+    copyright_text: "",
+    contact_email: "",
+    contact_phone: "",
+  });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [brandingMessage, setBrandingMessage] = useState("");
+
+  useEffect(() => {
+    if (settings) {
+      setBrandingForm({
+        site_title: settings.site_title || "LASHINIGEO LMS",
+        site_short_name: settings.site_short_name || "LASHINIGEO",
+        copyright_text: settings.copyright_text || "© 2026 Lashinigeo LMS. All rights reserved.",
+        contact_email: settings.contact_email || "support@lashinigeo.lk",
+        contact_phone: settings.contact_phone || "+94 77 123 4567",
+      });
+    }
+  }, [settings]);
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingBranding(true);
+    setBrandingMessage("");
+
+    try {
+      const fd = new FormData();
+      Object.entries(brandingForm).forEach(([k, v]) => {
+        fd.append(k, v);
+      });
+      if (logoFile) fd.append("logo_file", logoFile);
+      if (faviconFile) fd.append("favicon_file", faviconFile);
+
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        body: fd,
+      });
+
+      if (res.ok) {
+        setBrandingMessage("White-label branding settings saved successfully!");
+        await refetchSettings();
+      } else {
+        alert("Failed to save branding settings.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saving branding settings.");
+    } finally {
+      setSavingBranding(false);
+    }
+  };
 
   // User management states
   const [users, setUsers] = useState<any[]>([]);
@@ -667,6 +728,157 @@ function SettingsContent() {
             </CardBody>
           </Card>
         </Tab>
+
+        {isSuperOrHigher && (
+          <Tab key="whitelabel" title="White-Label & Branding">
+            <Card>
+              <CardHeader>
+                <div>
+                  <h2 className="text-2xl font-bold">White-Labeling & System Branding</h2>
+                  <p className="text-sm text-default-500 mt-1">
+                    Customize the system brand name, site logo, favicon, copyright text, and contact details across the LMS.
+                  </p>
+                </div>
+              </CardHeader>
+              <CardBody>
+                <form onSubmit={handleSaveBranding} className="space-y-6 max-w-3xl">
+                  {/* Brand Logo & Favicon Upload Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 rounded-xl border border-default-200 dark:border-default-100 bg-default-50/50">
+                    {/* Site Logo */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-semibold text-foreground">
+                        Site Brand Logo
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-lg border border-default-200 bg-white dark:bg-black p-2 flex items-center justify-center shadow-xs">
+                          <img
+                            src={logoPreview || settings.site_logo_url || "/assets/logo.png"}
+                            alt="Brand Logo"
+                            className="max-h-full max-w-full object-contain"
+                            onError={(e: any) => { e.target.src = "/assets/logo.png"; }}
+                          />
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setLogoFile(file);
+                              setLogoPreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          className="text-xs text-default-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Site Favicon */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-semibold text-foreground">
+                        Site Favicon (.ico / .png)
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-lg border border-default-200 bg-white dark:bg-black p-2 flex items-center justify-center shadow-xs">
+                          <img
+                            src={faviconPreview || settings.site_favicon_url || "/favicon.ico"}
+                            alt="Favicon"
+                            className="max-h-full max-w-full object-contain"
+                            onError={(e: any) => { e.target.src = "/favicon.ico"; }}
+                          />
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/x-icon,image/png,image/vnd.microsoft.icon"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setFaviconFile(file);
+                              setFaviconPreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          className="text-xs text-default-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Text Settings Form Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                      <Input
+                        label="Full Site Title / System Name *"
+                        placeholder="e.g. LASHINIGEO LMS"
+                        value={brandingForm.site_title}
+                        onValueChange={(v) => setBrandingForm({ ...brandingForm, site_title: v })}
+                        isRequired
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        label="Short Brand Name *"
+                        placeholder="e.g. LASHINIGEO"
+                        value={brandingForm.site_short_name}
+                        onValueChange={(v) => setBrandingForm({ ...brandingForm, site_short_name: v })}
+                        isRequired
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        type="email"
+                        label="Support Contact Email"
+                        placeholder="support@yourcompany.com"
+                        value={brandingForm.contact_email}
+                        onValueChange={(v) => setBrandingForm({ ...brandingForm, contact_email: v })}
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        type="tel"
+                        label="Support Phone Number"
+                        placeholder="+94 77 123 4567"
+                        value={brandingForm.contact_phone}
+                        onValueChange={(v) => setBrandingForm({ ...brandingForm, contact_phone: v })}
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Input
+                        label="Copyright Text (Footer)"
+                        placeholder="© 2026 Your Company. All rights reserved."
+                        value={brandingForm.copyright_text}
+                        onValueChange={(v) => setBrandingForm({ ...brandingForm, copyright_text: v })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Alert Message */}
+                  {brandingMessage && (
+                    <div className="p-3.5 rounded-lg text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                      {brandingMessage}
+                    </div>
+                  )}
+
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      type="submit"
+                      color="primary"
+                      size="lg"
+                      isLoading={savingBranding}
+                      className="px-8 font-semibold shadow-sm"
+                    >
+                      Save White-Label Settings
+                    </Button>
+                  </div>
+                </form>
+              </CardBody>
+            </Card>
+          </Tab>
+        )}
 
         {isSuperOrHigher && (
           <Tab key="batchmanagement" title="Batch Customizer">

@@ -2,10 +2,13 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
 
 import { Atom } from "react-loading-indicators";
+
 export default function LoadingScreen() {
   const router = useRouter();
+  const { settings } = useSystemSettings();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -44,11 +47,14 @@ export default function LoadingScreen() {
 
       <div className="relative z-10 flex flex-col items-center">
         <img
-          src="/assets/logo.png"
-          alt="LASHINIGEO LMS"
+          src={settings.site_logo_url || "/assets/logo.png"}
+          alt={settings.site_title || "LASHINIGEO LMS"}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/assets/logo.png";
+          }}
           className="w-32 h-32 sm:w-36 sm:h-36 object-contain mb-4 filter dark:brightness-0 dark:invert transition-all drop-shadow-md"
         />
-          <Atom color="#868282" size="medium" text="" textColor="" />
+        <Atom color="#868282" size="medium" text="" textColor="" />
       </div>
     </div>
   );
