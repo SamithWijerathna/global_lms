@@ -13,6 +13,8 @@ import { Button } from "@heroui/button";
 import { Image } from "@heroui/image";
 import { Skeleton } from "@heroui/skeleton";
 import { useConfirm } from "@/components/admin/GlobalConfirm";
+import RichTextEditor from "@/components/RichTextEditor";
+import RichTextRenderer from "@/components/RichTextRenderer";
 import { useParams } from "next/navigation";
 
 export default function EditClassPage() {
@@ -270,12 +272,11 @@ export default function EditClassPage() {
               value={formData.class_code}
               onChange={handleInputChange}
             />
-            <Input
+            <RichTextEditor
               label="Class Description"
-              name="class_description"
-              placeholder="November batch for 2027 A/L students"
               value={formData.class_description}
-              onChange={handleInputChange}
+              onChange={(val) => setFormData({ ...formData, class_description: val })}
+              placeholder="Enter detailed class description with bolding, lists, and icons..."
             />
             <div>
               <label className="block text-sm font-medium mb-2">Current Class Image</label>

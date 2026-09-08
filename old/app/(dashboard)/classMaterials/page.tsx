@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/src/lib/useAuth";
 import BankTransferSection from "@/components/BankTransferSection";
+import RichTextRenderer from "@/components/RichTextRenderer";
 import ProtectedYouTubePlayer, { getYouTubeId, getMaterialCoverImage } from "@/components/ProtectedYouTubePlayer";
 
 type ClassItem = {
@@ -321,9 +322,9 @@ function MaterialViewer({
               </p>
             )}
             {material.material_description && (
-              <p className="mt-3 text-default-600 text-sm md:text-base leading-relaxed">
-                {material.material_description}
-              </p>
+              <div className="mt-3">
+                <RichTextRenderer content={material.material_description} />
+              </div>
             )}
             {material.material_type === "pdf" && !material.pdf_downloadable && (
               <div className="mt-4 flex items-center gap-2 text-warning text-xs font-medium">

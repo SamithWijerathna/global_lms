@@ -87,8 +87,17 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const classId = searchParams.get("class_id");
   const materialId = searchParams.get("material_id");
+  const action = searchParams.get("action");
 
   try {
+    if (action === "sections") {
+      const [rows]: any = await db.query(
+        "SELECT DISTINCT section_name FROM class_material_list WHERE section_name IS NOT NULL AND section_name != '' ORDER BY section_name ASC"
+      );
+      const sections = Array.isArray(rows) ? rows.map((r: any) => r.section_name) : [];
+      return NextResponse.json(sections);
+    }
+
     if (materialId) {
       const [materials] = await db.query(
         "SELECT * FROM class_material_list WHERE material_id = ?",

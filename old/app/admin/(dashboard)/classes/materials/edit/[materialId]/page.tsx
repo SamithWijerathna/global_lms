@@ -15,6 +15,8 @@ import { Chip } from "@heroui/chip";
 import { Image } from "@heroui/image";
 import ProtectedYouTubePlayer, { getYouTubeId, getYouTubeThumbnail } from "@/components/ProtectedYouTubePlayer";
 import { useParams } from "next/navigation";
+import RichTextEditor from "@/components/RichTextEditor";
+import RichTextRenderer from "@/components/RichTextRenderer";
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
 
@@ -40,6 +42,20 @@ export default function EditMaterialPage() {
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [loadingMaterial, setLoadingMaterial] = useState(true);
   const [isCustomSection, setIsCustomSection] = useState(false);
+  const [sectionsList, setSectionsList] = useState<string[]>(PREDEFINED_SECTIONS);
+
+  const saveCustomSection = (secName: string) => {
+    if (!secName || !secName.trim()) return;
+    const trimmed = secName.trim();
+    if (typeof window !== "undefined") {
+      const savedLocal = JSON.parse(localStorage.getItem("custom_material_sections") || "[]");
+      if (!savedLocal.includes(trimmed)) {
+        const updated = [...savedLocal, trimmed];
+        localStorage.setItem("custom_material_sections", JSON.stringify(updated));
+      }
+    }
+    setSectionsList(prev => Array.from(new Set([...prev, trimmed])));
+  };
 
   const [materialType, setMaterialType] = useState<"video" | "pdf" | "link">("video");
 
@@ -89,6 +105,25 @@ export default function EditMaterialPage() {
         setLoadingClasses(false);
       }
     };
+
+    const fetchSections = async () => {
+      try {
+        const res = await fetch("/api/admin/classes/materials?action=sections", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET_TOKEN || ""}` },
+        });
+        const dbSections = await res.json();
+        const savedLocal = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("custom_material_sections") || "[]") : [];
+        const combined = Array.from(new Set([...PREDEFINED_SECTIONS, ...(Array.isArray(dbSections) ? dbSections : []), ...savedLocal]));
+        setSectionsList(combined);
+      } catch (err) {
+        const savedLocal = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("custom_material_sections") || "[]") : [];
+        const combined = Array.from(new Set([...PREDEFINED_SECTIONS, ...savedLocal]));
+        setSectionsList(combined);
+      }
+    };
+
+    fetchSections();
 
     const fetchMaterial = async () => {
       try {
@@ -316,11 +351,11 @@ export default function EditMaterialPage() {
               isRequired
             />
 
-            <Input
-              label="Description"
+            <RichTextEditor
+              label="Description (Optional)"
               value={formData.material_description}
-              onChange={handleInputChange}
-              name="material_description"
+              onChange={(val) => setFormData({ ...formData, material_description: val })}
+              placeholder="Detailed description with bolding, lists, and icons..."
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -337,21 +372,24 @@ export default function EditMaterialPage() {
                       if (!isCustomSection) setFormData({ ...formData, section_name: "" });
                     }}
                   >
-                    {isCustomSection ? "Predefined List" : "+ Custom Section"}
+                    {isCustomSection ? "Saved Sections List" : "+ Custom Section"}
                   </Button>
                 </div>
                 {isCustomSection ? (
                   <Input
                     placeholder="e.g. Special Lesson, Revision 01"
                     value={formData.section_name}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      saveCustomSection(e.target.value);
+                    }}
                     name="section_name"
                     size="sm"
                   />
                 ) : (
                   <Select
                     aria-label="Select Section"
-                    placeholder="Select predefined section"
+                    placeholder="Select section"
                     selectedKeys={formData.section_name ? [formData.section_name] : []}
                     onSelectionChange={(keys) => {
                       const val = Array.from(keys)[0] as string;
@@ -359,7 +397,7 @@ export default function EditMaterialPage() {
                     }}
                     size="sm"
                   >
-                    {PREDEFINED_SECTIONS.map((sec) => (
+                    {sectionsList.map((sec) => (
                       <SelectItem key={sec} textValue={sec}>
                         {sec}
                       </SelectItem>
@@ -578,9 +616,9 @@ export default function EditMaterialPage() {
 
             <CardBody className="pt-6">
               <h3 className="text-2xl font-bold">{formData.material_title || "Material Title"}</h3>
-              <p className="text-default-600 mt-2">
-                {formData.material_description || "No description"}
-              </p>
+              <div className="mt-2">
+                <RichTextRenderer content={formData.material_description} />
+              </div>
 
               {materialType === "link" && formData.material_link && !getYouTubeId(formData.material_link) && (
                 <p className="text-primary text-sm mt-3 break-all">{formData.material_link}</p>

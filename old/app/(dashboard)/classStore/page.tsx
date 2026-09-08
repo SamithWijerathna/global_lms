@@ -16,6 +16,7 @@ import { Upload, CheckCircle, Banknote, Building2, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/lib/useAuth";
 import BankTransferSection from "@/components/BankTransferSection";
+import RichTextRenderer from "@/components/RichTextRenderer";
 
 export default function LessonStorePage() {
   const router = useRouter();
@@ -442,8 +443,8 @@ export default function LessonStorePage() {
                     {/* Description */}
                     <div>
                       <h4 className="text-sm font-semibold text-default-700 mb-2">Description & Syllabus</h4>
-                      <div className="p-4 rounded-xl bg-default-50 dark:bg-default-50/5 text-default-700 text-sm leading-relaxed whitespace-pre-line border border-default-200/40 max-h-60 overflow-y-auto">
-                        {selectedDetailsClass.class_description || "No detailed description provided."}
+                      <div className="p-4 rounded-xl bg-default-50 dark:bg-default-50/5 border border-default-200/40 max-h-60 overflow-y-auto">
+                        <RichTextRenderer content={selectedDetailsClass.class_description} />
                       </div>
                     </div>
                   </div>
