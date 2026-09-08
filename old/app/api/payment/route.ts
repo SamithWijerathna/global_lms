@@ -110,32 +110,44 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const all = searchParams.get("all");
-
     const db = await getDBConnection();
 
-    const baseQuery = `
-      SELECT 
-        p.*,
-        COALESCE(
-          NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
-          u.user_email,
-          u.student_id,
-          'Unknown Student'
-        ) AS student_name,
-        COALESCE(c.class_title, sp.studypack_title, 'Unknown Class') AS class_title
-      FROM payments p
-      LEFT JOIN users u ON (p.student_uuid = u.uuid OR p.student_uuid = u.student_id OR p.student_uuid = CAST(u.id AS CHAR))
-      LEFT JOIN class_list c ON p.item_type = 'class' AND (p.item_id = c.class_id OR p.item_id = CAST(c.id AS CHAR))
-      LEFT JOIN studypack_list sp ON p.item_type = 'studypack' AND (p.item_id = sp.studypack_id OR p.item_id = CAST(sp.id AS CHAR))
-    `;
+    // 1. Try rich SQL query with joins
+    try {
+      const baseQuery = `
+        SELECT 
+          p.*,
+          COALESCE(
+            NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
+            u.user_email,
+            u.student_id,
+            'Unknown Student'
+          ) AS student_name,
+          COALESCE(c.class_title, 'Unknown Class') AS class_title
+        FROM payments p
+        LEFT JOIN users u ON (p.student_uuid = u.uuid OR p.student_uuid = u.student_id OR p.student_uuid = CAST(u.id AS CHAR))
+        LEFT JOIN class_list c ON (p.item_id = c.class_id OR p.item_id = CAST(c.id AS CHAR))
+      `;
 
-    if (all) {
-      const [rows] = await db.query(`${baseQuery} ORDER BY p.created_at DESC`);
+      if (all) {
+        const [rows] = await db.query(`${baseQuery} ORDER BY p.created_at DESC`);
+        return NextResponse.json({ payments: rows });
+      }
+
+      const [rows] = await db.query(`${baseQuery} WHERE p.status = 'pending' ORDER BY p.created_at DESC`);
+      return NextResponse.json({ payments: rows });
+    } catch (joinError) {
+      console.warn("SQL Join query failed, falling back to simple query:", joinError);
+
+      // 2. Safe fallback query directly on payments table
+      if (all) {
+        const [rows] = await db.query("SELECT * FROM payments ORDER BY created_at DESC");
+        return NextResponse.json({ payments: rows });
+      }
+
+      const [rows] = await db.query("SELECT * FROM payments WHERE status = 'pending' ORDER BY created_at DESC");
       return NextResponse.json({ payments: rows });
     }
-
-    const [rows] = await db.query(`${baseQuery} WHERE p.status = 'pending' ORDER BY p.created_at DESC`);
-    return NextResponse.json({ payments: rows });
   } catch (error) {
     console.error("Error fetching payments:", error);
     return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
