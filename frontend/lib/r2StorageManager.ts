@@ -231,7 +231,16 @@ export async function uploadTenantMediaToR2(params: {
 /**
  * Deletes an object from Cloudflare R2 or local fallback
  */
-export async function deleteTenantMediaFromR2(fileKey: string): Promise<void> {
+export async function deleteTenantMediaFromR2(fileKeyOrUrl: string): Promise<void> {
+  if (!fileKeyOrUrl) return;
+
+  let fileKey = fileKeyOrUrl;
+  const tenantsIdx = fileKeyOrUrl.indexOf("tenants/");
+  if (tenantsIdx !== -1) {
+    fileKey = fileKeyOrUrl.substring(tenantsIdx);
+  }
+  fileKey = decodeURIComponent(fileKey.split("?")[0].replace(/^\/uploads\//, ""));
+
   if (isR2Configured()) {
     try {
       const s3 = getS3Client();
@@ -241,16 +250,19 @@ export async function deleteTenantMediaFromR2(fileKey: string): Promise<void> {
           Key: fileKey,
         })
       );
+      // Invalidate cache for tenant
+      const parts = fileKey.split("/");
+      if (parts[1]) r2UsageCache.delete(`r2_usage_${parts[1]}`);
     } catch (err: any) {
       console.warn(`[R2 DELETE WARN] Failed deleting ${fileKey}:`, err.message);
     }
-  } else {
-    const localPath = path.join(process.cwd(), "public", "uploads", fileKey);
-    if (fs.existsSync(localPath)) {
-      try {
-        fs.unlinkSync(localPath);
-      } catch (_) {}
-    }
+  }
+
+  const localPath = path.join(process.cwd(), "public", "uploads", fileKey);
+  if (fs.existsSync(localPath)) {
+    try {
+      fs.unlinkSync(localPath);
+    } catch (_) {}
   }
 }
 

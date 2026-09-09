@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDBConnection, authorize, getTenantMeta } from "../../../db";
 import { healDatabase } from "../../../dbHealer";
-import { uploadTenantMediaToR2, resolveMediaUrl } from "@/lib/r2StorageManager";
+import { uploadTenantMediaToR2, resolveMediaUrl, deleteTenantMediaFromR2 } from "@/lib/r2StorageManager";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -444,6 +444,24 @@ export async function POST(req: Request) {
     const display_order = parseInt((formData.get("display_order") as string) || "0") || 0;
 
     try {
+      // Check if old media files need to be deleted from R2
+      const [oldRows]: any = await db.query(
+        "SELECT material_video_url, material_pdf_url, material_imageurl FROM class_material_list WHERE material_id = ? LIMIT 1",
+        [material_id]
+      );
+      if (oldRows && oldRows.length > 0) {
+        const old = oldRows[0];
+        if (old.material_video_url && material_video_url && old.material_video_url !== material_video_url) {
+          deleteTenantMediaFromR2(old.material_video_url).catch(console.warn);
+        }
+        if (old.material_pdf_url && material_pdf_url && old.material_pdf_url !== material_pdf_url) {
+          deleteTenantMediaFromR2(old.material_pdf_url).catch(console.warn);
+        }
+        if (old.material_imageurl && material_imageurl && old.material_imageurl !== material_imageurl) {
+          deleteTenantMediaFromR2(old.material_imageurl).catch(console.warn);
+        }
+      }
+
       // Delete old entries
       await db.query("DELETE FROM class_material_list WHERE material_id = ?", [material_id]);
 
@@ -514,12 +532,8 @@ export async function DELETE(req: Request) {
     ].filter(Boolean);
 
     for (const file of toDelete) {
-      try {
-        await fs.unlink(path.join(process.cwd(), "public", file));
-        console.log(`Deleted file: ${file}`);
-      } catch (err) {
-        console.warn(`Failed to delete file: ${file}`, err);
-      }
+      await deleteTenantMediaFromR2(file);
+      console.log(`Deleted media: ${file}`);
     }
 
     return NextResponse.json({ success: true, deleted: materialId });
