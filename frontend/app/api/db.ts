@@ -275,7 +275,7 @@ export async function getTenantMeta(contextOrReq?: Request | Headers | string): 
       const [rows] = await cp.execute<any[]>(
         `SELECT t.id as tenantId, t.slug, t.dbName, t.name, 
                 COALESCE(t.maxStorageMb, 500) as maxStorageMb, 
-                COALESCE(t.maxMediaStorageGb, 10) as maxMediaStorageGb 
+                COALESCE(t.maxMediaStorageGb, 0) as maxMediaStorageGb 
          FROM TenantRouting r
          JOIN SaaSTenant t ON r.tenantId = t.id
          WHERE LOWER(r.domain) = ? AND r.status = 'active' LIMIT 1`,
@@ -287,7 +287,7 @@ export async function getTenantMeta(contextOrReq?: Request | Headers | string): 
       const [rows] = await cp.execute<any[]>(
         `SELECT t.id as tenantId, t.slug, t.dbName, t.name, 
                 COALESCE(t.maxStorageMb, 500) as maxStorageMb, 
-                COALESCE(t.maxMediaStorageGb, 10) as maxMediaStorageGb 
+                COALESCE(t.maxMediaStorageGb, 0) as maxMediaStorageGb 
          FROM SaaSTenant t
          WHERE LOWER(t.slug) = ? AND t.status = 'active' LIMIT 1`,
         [slug]
@@ -304,6 +304,6 @@ export async function getTenantMeta(contextOrReq?: Request | Headers | string): 
     dbName: defaultDb,
     name: "Default Tenant",
     maxStorageMb: 500,
-    maxMediaStorageGb: 10,
+    maxMediaStorageGb: 0,
   };
 }

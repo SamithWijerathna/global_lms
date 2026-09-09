@@ -108,8 +108,8 @@ export async function getTenantR2StorageUsage(
   }
 
   const usedGB = parseFloat((usedBytes / (1024 * 1024 * 1024)).toFixed(2));
-  const totalGB = maxMediaStorageGb > 0 ? maxMediaStorageGb : 10;
-  const percentage = Math.min(100, Math.round((usedGB / totalGB) * 100));
+  const totalGB = Math.max(0, maxMediaStorageGb);
+  const percentage = totalGB > 0 ? Math.min(100, Math.round((usedGB / totalGB) * 100)) : 0;
   const remainingGB = Math.max(0, parseFloat((totalGB - usedGB).toFixed(2)));
 
   return {
@@ -127,8 +127,14 @@ export async function getTenantR2StorageUsage(
 export async function checkTenantR2Quota(
   tenantId: string,
   newFileSizeBytes: number,
-  maxMediaStorageGb: number = 10
+  maxMediaStorageGb: number = 0
 ): Promise<void> {
+  if (maxMediaStorageGb <= 0) {
+    throw new Error(
+      "CLOUD_MEDIA_STORAGE_DISABLED: Direct file and video uploads are not enabled on your plan (0 GB). You can embed YouTube and Vimeo video links for free, or contact your administrator to add media storage."
+    );
+  }
+
   const usage = await getTenantR2StorageUsage(tenantId, maxMediaStorageGb);
   const newUsedBytes = usage.usedBytes + newFileSizeBytes;
   const maxBytes = maxMediaStorageGb * 1024 * 1024 * 1024;

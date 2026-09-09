@@ -453,9 +453,15 @@ export default function SaaSAdminPage() {
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <span className="text-default-500 font-medium">☁️ Media:</span>
-                        <Chip size="sm" variant="flat" color="secondary">
-                          {t.maxMediaStorageGb || 10} GB
-                        </Chip>
+                        {t.maxMediaStorageGb && t.maxMediaStorageGb > 0 ? (
+                          <Chip size="sm" variant="flat" color="secondary">
+                            {t.maxMediaStorageGb} GB
+                          </Chip>
+                        ) : (
+                          <Chip size="sm" variant="flat" color="default">
+                            None (Embeds)
+                          </Chip>
+                        )}
                       </div>
                     </div>
                   </TableCell>
@@ -603,6 +609,7 @@ export default function SaaSAdminPage() {
                         selectedKeys={[formData.maxMediaStorageGb]}
                         onChange={(e) => setFormData({ ...formData, maxMediaStorageGb: e.target.value })}
                       >
+                        <SelectItem key="0">0 GB (None - Embeds Only)</SelectItem>
                         <SelectItem key="10">10 GB (Standard)</SelectItem>
                         <SelectItem key="20">20 GB (+10 GB)</SelectItem>
                         <SelectItem key="50">50 GB (+40 GB)</SelectItem>
@@ -798,15 +805,15 @@ export default function SaaSAdminPage() {
                     <Chip color="secondary" variant="flat" size="sm">Cloudflare R2</Chip>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {[10, 20, 50, 100].map((gb) => (
+                    {[0, 10, 20, 50, 100].map((gb) => (
                       <Button
                         key={gb}
                         size="sm"
                         variant={editMediaGb === gb ? "solid" : "flat"}
-                        color="secondary"
+                        color={gb === 0 ? "default" : "secondary"}
                         onPress={() => setEditMediaGb(gb)}
                       >
-                        {gb} GB
+                        {gb === 0 ? "0 GB (None)" : `${gb} GB`}
                       </Button>
                     ))}
                   </div>
@@ -814,7 +821,7 @@ export default function SaaSAdminPage() {
                     label="Custom Cloud Media Quota (GB)"
                     type="number"
                     value={String(editMediaGb)}
-                    onValueChange={(v) => setEditMediaGb(parseInt(v, 10) || 10)}
+                    onValueChange={(v) => setEditMediaGb(v === "" ? 0 : Math.max(0, parseInt(v, 10) || 0))}
                   />
                 </div>
               </ModalBody>

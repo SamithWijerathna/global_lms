@@ -92,7 +92,8 @@ export default function DashboardHome() {
   const localPercentage = storage?.local?.percentage ?? (localTotalMB > 0 ? Math.round((localUsedMB / localTotalMB) * 100) : 0);
 
   const mediaUsedGB = storage?.media?.usedGB ?? 0;
-  const mediaTotalGB = storage?.media?.totalGB ?? 10;
+  const mediaTotalGB = storage?.media?.totalGB ?? 0;
+  const isEmbedOnly = !loading && mediaTotalGB === 0;
   const mediaPercentage = storage?.media?.percentage ?? (mediaTotalGB > 0 ? Math.round((mediaUsedGB / mediaTotalGB) * 100) : 0);
 
   const currentPercentage = activeStorageTab === "local" ? localPercentage : mediaPercentage;
@@ -218,25 +219,39 @@ export default function DashboardHome() {
         onClick={() => setActiveStorageTab("media")}
       >
         <span>☁️ Cloud Media</span>
-        <span className="opacity-80">({mediaTotalGB} GB)</span>
+        <span className="opacity-80">
+          {isEmbedOnly ? "(Embeds)" : `(${mediaTotalGB} GB)`}
+        </span>
       </button>
     </div>
   </CardHeader>
   <CardBody className="p-6 flex flex-col items-center justify-center">
-    <CircularProgress
-      aria-label="Storage usage"
-      size="lg"
-      value={loading ? 0 : currentPercentage}
-      color={currentPercentage > 85 ? "danger" : currentPercentage > 60 ? "warning" : activeStorageTab === "media" ? "secondary" : "success"}
-      showValueLabel={true}
-      classNames={{
-        svg: "w-56 h-56 drop-shadow-lg",
-        indicator: activeStorageTab === "media" ? "stroke-purple-500" : currentPercentage > 85 ? "stroke-red-500" : "stroke-green-500",
-        track: "stroke-gray-200 dark:stroke-gray-700",
-        value: "text-4xl font-bold",
-      }}
-      formatOptions={{ style: "percent" }}
-    />
+    {activeStorageTab === "media" && isEmbedOnly ? (
+      <div className="w-56 h-56 rounded-full border-2 border-dashed border-purple-300 dark:border-purple-700 flex flex-col items-center justify-center p-4 text-center bg-purple-50/50 dark:bg-purple-950/20">
+        <span className="text-4xl mb-2">🎬</span>
+        <span className="text-sm font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
+          Embeds Only
+        </span>
+        <span className="text-xs text-default-500 mt-1 max-w-[160px]">
+          YouTube & Vimeo links are unlimited & free
+        </span>
+      </div>
+    ) : (
+      <CircularProgress
+        aria-label="Storage usage"
+        size="lg"
+        value={loading ? 0 : currentPercentage}
+        color={currentPercentage > 85 ? "danger" : currentPercentage > 60 ? "warning" : activeStorageTab === "media" ? "secondary" : "success"}
+        showValueLabel={true}
+        classNames={{
+          svg: "w-56 h-56 drop-shadow-lg",
+          indicator: activeStorageTab === "media" ? "stroke-purple-500" : currentPercentage > 85 ? "stroke-red-500" : "stroke-green-500",
+          track: "stroke-gray-200 dark:stroke-gray-700",
+          value: "text-4xl font-bold",
+        }}
+        formatOptions={{ style: "percent" }}
+      />
+    )}
     <div className="mt-6 text-center">
       {loading ? (
         <>
@@ -249,6 +264,14 @@ export default function DashboardHome() {
           <p className="text-xs text-default-500 mt-1">Student Avatars, Payment Slips & Covers</p>
           <p className="text-sm text-success font-medium mt-2">
             {currentRemaining}% space available ({storage?.local?.remainingMB ?? (localTotalMB - localUsedMB)} MB remaining)
+          </p>
+        </>
+      ) : isEmbedOnly ? (
+        <>
+          <p className="text-xl font-bold text-foreground">0 GB Direct Storage</p>
+          <p className="text-xs text-default-500 mt-1">Direct file/video uploads not assigned</p>
+          <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-2">
+            ✨ Embed YouTube & Vimeo classes freely
           </p>
         </>
       ) : (
@@ -278,10 +301,14 @@ export default function DashboardHome() {
         <div className="p-3 bg-purple-50/30 rounded-xl border border-purple-200 text-left space-y-1">
           <div className="flex justify-between items-center text-sm font-semibold text-purple-700 dark:text-purple-300">
             <span>☁️ Cloud Media (R2)</span>
-            <span className="font-bold">{mediaPercentage}%</span>
+            <span className="font-bold">{isEmbedOnly ? "Embeds" : `${mediaPercentage}%`}</span>
           </div>
-          <p className="text-xs text-default-500">{mediaUsedGB} GB of {mediaTotalGB} GB used</p>
-          <p className="text-[11px] text-default-400">Videos, Documents & Materials</p>
+          <p className="text-xs text-default-500">
+            {isEmbedOnly ? "Direct uploads disabled (0 GB)" : `${mediaUsedGB} GB of ${mediaTotalGB} GB used`}
+          </p>
+          <p className="text-[11px] text-default-400">
+            {isEmbedOnly ? "Free YouTube & Vimeo embeds" : "Videos, Documents & Materials"}
+          </p>
         </div>
         <p className="text-xs text-default-400 italic">Click the tabs above to toggle view</p>
       </div>

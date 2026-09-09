@@ -160,7 +160,7 @@ router.get("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
   try {
     const [tenants] = await pool.execute<any[]>(
       `SELECT t.id, t.name, t.slug, t.email, t.phone, t.plan, t.monthlyPrice, t.status, 
-              t.dbName, t.maxStorageMb, COALESCE(t.maxMediaStorageGb, 10) AS maxMediaStorageGb,
+              t.dbName, t.maxStorageMb, COALESCE(t.maxMediaStorageGb, 0) AS maxMediaStorageGb,
               t.licenseKey, t.startDate, t.expiryDate, t.createdAt,
               d.domain AS primaryDomain, d.type AS domainType, d.isVerified AS domainVerified
        FROM SaaSTenant t
@@ -284,7 +284,9 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
         monthlyPrice,
         dbName,
         parseInt(String(maxStorageMb), 10) || 500,
-        parseInt(String(maxMediaStorageGb), 10) || 10,
+        maxMediaStorageGb !== undefined && !isNaN(parseInt(String(maxMediaStorageGb), 10))
+          ? Math.max(0, parseInt(String(maxMediaStorageGb), 10))
+          : 0,
         licenseKey,
         normStartDate,
         normExpiryDate,
@@ -450,7 +452,8 @@ router.patch("/tenants/:id", authMiddleware, requireSuperAdmin, async (req, res)
     }
     if (maxMediaStorageGb !== undefined) {
       updates.push("maxMediaStorageGb = ?");
-      values.push(parseInt(String(maxMediaStorageGb), 10) || 10);
+      const parsedMedia = parseInt(String(maxMediaStorageGb), 10);
+      values.push(isNaN(parsedMedia) ? 0 : Math.max(0, parsedMedia));
     }
     if (plan !== undefined) {
       updates.push("plan = ?");
