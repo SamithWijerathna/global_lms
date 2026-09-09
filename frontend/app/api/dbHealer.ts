@@ -184,6 +184,98 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "users",
+        sql: `CREATE TABLE IF NOT EXISTS users (
+          id INT NOT NULL AUTO_INCREMENT,
+          uuid VARCHAR(150) DEFAULT NULL,
+          student_id VARCHAR(150) DEFAULT NULL,
+          first_name VARCHAR(255) DEFAULT NULL,
+          last_name VARCHAR(255) DEFAULT NULL,
+          user_email VARCHAR(150) DEFAULT NULL,
+          user_address VARCHAR(255) DEFAULT NULL,
+          phone VARCHAR(20) DEFAULT NULL,
+          birthday DATE DEFAULT NULL,
+          id_number VARCHAR(20) DEFAULT NULL,
+          batch VARCHAR(20) DEFAULT NULL,
+          user_password VARCHAR(255) DEFAULT NULL,
+          gid VARCHAR(150) DEFAULT NULL,
+          profile_url VARCHAR(255) DEFAULT NULL,
+          create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          setup_token VARCHAR(36) DEFAULT NULL,
+          token_expiry DATETIME DEFAULT NULL,
+          profile_completed TINYINT(1) DEFAULT '0',
+          PRIMARY KEY (id),
+          UNIQUE KEY idx_users_uuid (uuid),
+          UNIQUE KEY idx_users_email (user_email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "class_list",
+        sql: `CREATE TABLE IF NOT EXISTS class_list (
+          id INT NOT NULL AUTO_INCREMENT,
+          class_id VARCHAR(50) DEFAULT NULL UNIQUE,
+          class_title VARCHAR(150) DEFAULT NULL,
+          class_description TEXT DEFAULT NULL,
+          class_price VARCHAR(50) DEFAULT NULL,
+          class_type VARCHAR(50) DEFAULT NULL,
+          renew_type VARCHAR(50) DEFAULT NULL,
+          batch VARCHAR(50) DEFAULT NULL,
+          class_code VARCHAR(50) DEFAULT NULL,
+          class_imageurl VARCHAR(255) DEFAULT NULL,
+          display_order INT DEFAULT 0,
+          create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "payments",
+        sql: `CREATE TABLE IF NOT EXISTS payments (
+          id INT NOT NULL AUTO_INCREMENT,
+          payment_uuid VARCHAR(255) DEFAULT NULL,
+          student_uuid VARCHAR(255) DEFAULT NULL,
+          amount INT DEFAULT NULL,
+          item_type VARCHAR(50) DEFAULT NULL,
+          item_id VARCHAR(50) DEFAULT NULL,
+          bank VARCHAR(50) DEFAULT NULL,
+          transaction_proof VARCHAR(250) DEFAULT NULL,
+          status VARCHAR(50) DEFAULT NULL,
+          approved_at TIMESTAMP NULL DEFAULT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "class_material_list",
+        sql: `CREATE TABLE IF NOT EXISTS class_material_list (
+          id INT NOT NULL AUTO_INCREMENT,
+          material_id VARCHAR(50) DEFAULT NULL,
+          material_description VARCHAR(150) DEFAULT NULL,
+          material_imageurl VARCHAR(150) DEFAULT NULL,
+          material_title VARCHAR(150) DEFAULT NULL,
+          material_type VARCHAR(150) DEFAULT NULL,
+          material_video_url VARCHAR(150) DEFAULT NULL,
+          material_pdf_url VARCHAR(150) DEFAULT NULL,
+          material_link VARCHAR(150) DEFAULT NULL,
+          class_id VARCHAR(50) DEFAULT NULL,
+          create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          downloadable VARCHAR(50) DEFAULT NULL,
+          view_count_enabled TINYINT DEFAULT '0',
+          view_limit INT DEFAULT NULL,
+          expire_hours VARCHAR(20) DEFAULT NULL,
+          display_order INT DEFAULT 0,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "permission",
+        sql: `CREATE TABLE IF NOT EXISTS permission (
+          id INT NOT NULL AUTO_INCREMENT,
+          role_name VARCHAR(50) DEFAULT NULL,
+          data LONGTEXT,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
       }
     ];
 

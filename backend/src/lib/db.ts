@@ -153,15 +153,19 @@ export async function cloneTenantSchema(targetDb: string): Promise<boolean> {
     }
 
     const sqlContent = fs.readFileSync(sqlPath, "utf8");
-    const queries = sqlContent
+    const cleanSql = sqlContent
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/--.*$/gm, "")
+      .replace(/#.*$/gm, "");
+
+    const queries = cleanSql
       .split(";")
       .map((q) => q.trim())
       .filter((q) => {
         if (q.length === 0) return false;
-        if (q.startsWith("--") || q.startsWith("/*") || q.startsWith("#")) return false;
         const upper = q.toUpperCase();
-        if (upper.startsWith("CREATE DATABASE") || upper.startsWith("USE ")) return false;
-        return upper.startsWith("CREATE TABLE");
+        if (upper.startsWith("CREATE DATABASE") || upper.startsWith("USE ") || upper.startsWith("SET ")) return false;
+        return upper.startsWith("CREATE TABLE") || upper.startsWith("INSERT INTO");
       })
       .map((q) => q.replace(/CREATE TABLE(?! IF NOT EXISTS)/i, "CREATE TABLE IF NOT EXISTS"));
 

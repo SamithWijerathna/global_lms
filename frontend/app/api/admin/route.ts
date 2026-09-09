@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDBConnection, authorize, getTenantMeta } from "../db";
+import { healDatabase } from "../dbHealer";
 import { getTenantLocalStorageUsage } from "@/lib/localStorageManager";
 import { getTenantR2StorageUsage } from "@/lib/r2StorageManager";
 
@@ -7,6 +8,12 @@ export async function GET(req: Request) {
   try {
     const meta = await getTenantMeta(req);
     const db = await getDBConnection(meta.dbName);
+
+    // Ensure tenant database has all required tables
+    await healDatabase(db).catch((err) => {
+      console.warn("Database healing warning in dashboard:", err.message);
+    });
+
     /* ---------------- AUTH ---------------- */
     const authError = await authorize(req, db);
     if (authError) {
@@ -116,8 +123,11 @@ export async function GET(req: Request) {
       recentPayments,
       pendingPayments,
     });
-  } catch (error) {
-    console.error("Dashboard API Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Dashboard API Error:", error?.message || error);
+    return NextResponse.json({ 
+      error: "Internal Server Error",
+      message: error?.message || String(error)
+    }, { status: 500 });
   }
 }
