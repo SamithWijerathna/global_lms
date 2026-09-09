@@ -5,7 +5,8 @@ import { getTenantR2StorageUsage } from "@/lib/r2StorageManager";
 
 export async function GET(req: Request) {
   try {
-    const db = await getDBConnection();
+    const meta = await getTenantMeta(req);
+    const db = await getDBConnection(meta.dbName);
     /* ---------------- AUTH ---------------- */
     const authError = await authorize(req, db);
     if (authError) {
@@ -93,9 +94,6 @@ export async function GET(req: Request) {
     //   });
     //     const data = await res.json();
     
-    // const user = data.lashinigeo;
-
-    const meta = await getTenantMeta(req);
     const localUsage = getTenantLocalStorageUsage(meta.tenantId, meta.maxStorageMb);
     const mediaUsage = await getTenantR2StorageUsage(meta.tenantId, meta.maxMediaStorageGb);
 

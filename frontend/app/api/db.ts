@@ -84,12 +84,26 @@ async function resolveTenantDbName(domain?: string, slug?: string): Promise<stri
     let dbName: string | null = null;
 
     if (domain) {
+      const cleanDomain = domain.toLowerCase().replace(/^www\./, "");
       const [rows] = await cp.execute<any[]>(
-        "SELECT tenantDbName FROM TenantRouting WHERE LOWER(domain) = ? AND status = 'active' LIMIT 1",
-        [domain.toLowerCase()]
+        "SELECT tenantDbName FROM TenantRouting WHERE (LOWER(domain) = ? OR LOWER(domain) = ?) AND status = 'active' LIMIT 1",
+        [domain.toLowerCase(), cleanDomain]
       );
       if (rows.length > 0) {
         dbName = rows[0].tenantDbName;
+      }
+
+      // Check TenantDomain (handles all custom domains)
+      if (!dbName) {
+        const [tdRows] = await cp.execute<any[]>(
+          `SELECT t.dbName FROM TenantDomain d 
+           JOIN SaaSTenant t ON d.tenantId = t.id 
+           WHERE (LOWER(d.domain) = ? OR LOWER(d.domain) = ?) AND t.status = 'active' LIMIT 1`,
+          [domain.toLowerCase(), cleanDomain]
+        );
+        if (tdRows.length > 0) {
+          dbName = tdRows[0].dbName;
+        }
       }
     }
 
@@ -143,17 +157,25 @@ export async function getDBConnection(contextOrReq?: Request | Headers | string)
     const h = contextOrReq as Headers;
     domain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
     slug = h.get("x-tenant-slug");
-  } else {
+  }
+
+  // Fallback to Next.js headers() if domain is missing, local, or internal proxy
+  const isLocalOrMissing = !domain || domain.includes("127.0.0.1") || domain.includes("localhost");
+  if (isLocalOrMissing) {
     try {
       const h = await headers();
-      domain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
-      slug = h.get("x-tenant-slug");
-    } catch (_) {
-      // In non-request context (e.g. background tasks or build time)
-    }
+      const nhDomain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
+      if (nhDomain && !nhDomain.includes("127.0.0.1") && !nhDomain.includes("localhost")) {
+        domain = nhDomain;
+      }
+      if (!slug) slug = h.get("x-tenant-slug");
+    } catch (_) {}
   }
 
   if (domain) {
+    if (domain.includes(",")) {
+      domain = domain.split(",")[0].trim();
+    }
     domain = domain.replace(/:\d+$/, "").toLowerCase().trim();
   }
   if (slug) {
@@ -258,31 +280,67 @@ export async function getTenantMeta(contextOrReq?: Request | Headers | string): 
     const h = contextOrReq as Headers;
     domain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
     slug = h.get("x-tenant-slug");
-  } else {
+  }
+
+  // Fallback to Next.js headers() if domain is missing, local, or internal proxy
+  const isLocalOrMissing = !domain || domain.includes("127.0.0.1") || domain.includes("localhost");
+  if (isLocalOrMissing) {
     try {
       const h = await headers();
-      domain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
-      slug = h.get("x-tenant-slug");
+      const nhDomain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
+      if (nhDomain && !nhDomain.includes("127.0.0.1") && !nhDomain.includes("localhost")) {
+        domain = nhDomain;
+      }
+      if (!slug) slug = h.get("x-tenant-slug");
     } catch (_) {}
   }
 
-  if (domain) domain = domain.replace(/:\d+$/, "").toLowerCase().trim();
+  if (domain) {
+    if (domain.includes(",")) {
+      domain = domain.split(",")[0].trim();
+    }
+    domain = domain.replace(/:\d+$/, "").toLowerCase().trim();
+  }
   if (slug) slug = slug.toLowerCase().trim();
+
+  // Root domain check for subdomain slugs
+  const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "lms.circleone.asia").toLowerCase();
+  if (domain && domain !== rootDomain && domain.endsWith(`.${rootDomain}`)) {
+    const sub = domain.slice(0, -(rootDomain.length + 1));
+    if (sub && !["www", "admin", "app", "cname", "api"].includes(sub)) {
+      if (!slug) slug = sub;
+    }
+  }
 
   try {
     const cp = getCentralPool();
     if (domain) {
-      const [rows] = await cp.execute<any[]>(
+      const cleanDomain = domain.replace(/^www\./, "");
+      // 1. Try TenantRouting table
+      const [routingRows] = await cp.execute<any[]>(
         `SELECT t.id as tenantId, t.slug, t.dbName, t.name, 
                 COALESCE(t.maxStorageMb, 500) as maxStorageMb, 
                 COALESCE(t.maxMediaStorageGb, 0) as maxMediaStorageGb 
          FROM TenantRouting r
          JOIN SaaSTenant t ON r.tenantId = t.id
-         WHERE LOWER(r.domain) = ? AND r.status = 'active' LIMIT 1`,
-        [domain]
+         WHERE (LOWER(r.domain) = ? OR LOWER(r.domain) = ?) AND r.status = 'active' LIMIT 1`,
+        [domain, cleanDomain]
       );
-      if (rows.length > 0) return rows[0];
+      if (routingRows.length > 0) return routingRows[0];
+
+      // 2. Try TenantDomain table (canonical table for all custom domains)
+      const [domainRows] = await cp.execute<any[]>(
+        `SELECT t.id as tenantId, t.slug, t.dbName, t.name, 
+                COALESCE(t.maxStorageMb, 500) as maxStorageMb, 
+                COALESCE(t.maxMediaStorageGb, 0) as maxMediaStorageGb 
+         FROM TenantDomain d
+         JOIN SaaSTenant t ON d.tenantId = t.id
+         WHERE (LOWER(d.domain) = ? OR LOWER(d.domain) = ?) AND t.status = 'active' LIMIT 1`,
+        [domain, cleanDomain]
+      );
+      if (domainRows.length > 0) return domainRows[0];
     }
+
     if (slug) {
       const [rows] = await cp.execute<any[]>(
         `SELECT t.id as tenantId, t.slug, t.dbName, t.name, 

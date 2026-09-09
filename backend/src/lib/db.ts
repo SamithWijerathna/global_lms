@@ -70,11 +70,23 @@ export async function getTenantRouting(params: { host?: string; tenantId?: strin
 
   let rows: any[] = [];
   if (params.host) {
+    const cleanHost = params.host.toLowerCase().replace(/^www\./, "");
     const [domainRows] = await pool.execute<any[]>(
-      "SELECT tenantId, tenantSlug, tenantDbName, status FROM TenantRouting WHERE LOWER(domain) = ? AND status = 'active' LIMIT 1",
-      [params.host.toLowerCase()]
+      "SELECT tenantId, tenantSlug, tenantDbName, status FROM TenantRouting WHERE (LOWER(domain) = ? OR LOWER(domain) = ?) AND status = 'active' LIMIT 1",
+      [params.host.toLowerCase(), cleanHost]
     );
     rows = domainRows;
+
+    if (rows.length === 0) {
+      const [tdRows] = await pool.execute<any[]>(
+        `SELECT t.id AS tenantId, t.slug AS tenantSlug, t.dbName AS tenantDbName, t.status 
+         FROM TenantDomain d
+         JOIN SaaSTenant t ON d.tenantId = t.id
+         WHERE (LOWER(d.domain) = ? OR LOWER(d.domain) = ?) AND t.status = 'active' LIMIT 1`,
+        [params.host.toLowerCase(), cleanHost]
+      );
+      rows = tdRows;
+    }
   }
 
   if (rows.length === 0 && params.slug) {
