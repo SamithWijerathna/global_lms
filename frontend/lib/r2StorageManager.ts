@@ -33,7 +33,7 @@ export function isR2Configured(): boolean {
 
 let cachedS3Client: S3Client | null = null;
 
-function getS3Client(): S3Client {
+export function getS3Client(): S3Client {
   if (!cachedS3Client) {
     const accountId = process.env.R2_ACCOUNT_ID;
     cachedS3Client = new S3Client({
@@ -187,10 +187,10 @@ export async function uploadTenantMediaToR2(params: {
     // Invalidate cache
     r2UsageCache.delete(`r2_usage_${cleanId}`);
 
-    const publicDomain = (process.env.R2_PUBLIC_DOMAIN || "").replace(/\/$/, "");
+    const publicDomain = (process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN || process.env.R2_PUBLIC_DOMAIN || "").replace(/\/$/, "");
     const url = publicDomain
       ? `${publicDomain}/${fileKey}`
-      : `https://${bucket}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${fileKey}`;
+      : `/api/media/stream?key=${encodeURIComponent(fileKey)}`;
 
     return {
       url,
@@ -243,3 +243,41 @@ export async function deleteTenantMediaFromR2(fileKey: string): Promise<void> {
     }
   }
 }
+
+/**
+ * Resolves any media URL into a playable browser URL.
+ * Automatically transforms raw private S3/R2 endpoints (e.g. *.r2.cloudflarestorage.com)
+ * into either the R2 public domain or the secure streaming proxy.
+ */
+export function resolveMediaUrl(rawUrl: string | null | undefined): string {
+  if (!rawUrl) return "";
+
+  const publicDomain = (process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN || process.env.R2_PUBLIC_DOMAIN || "").replace(/\/$/, "");
+
+  // Handle raw private S3/R2 endpoints:
+  // e.g. https://8e3d0021ca6f1e278474ccb7f9d1ff10.r2.cloudflarestorage.com/tenants/...
+  // or https://bucket.8e3d0021ca6f1e278474ccb7f9d1ff10.r2.cloudflarestorage.com/tenants/...
+  const r2EndpointMatch = rawUrl.match(/^https?:\/\/[^/]*\.r2\.cloudflarestorage\.com\/(.+)$/);
+  if (r2EndpointMatch) {
+    let key = r2EndpointMatch[1];
+    const bucket = process.env.R2_BUCKET_NAME;
+    if (bucket && key.startsWith(`${bucket}/`)) {
+      key = key.substring(bucket.length + 1);
+    }
+    if (publicDomain) {
+      return `${publicDomain}/${key}`;
+    }
+    return `/api/media/stream?key=${encodeURIComponent(key)}`;
+  }
+
+  // If it's a relative R2 fileKey (e.g. tenants/...)
+  if (rawUrl.startsWith("tenants/")) {
+    if (publicDomain) {
+      return `${publicDomain}/${rawUrl}`;
+    }
+    return `/api/media/stream?key=${encodeURIComponent(rawUrl)}`;
+  }
+
+  return rawUrl;
+}
+

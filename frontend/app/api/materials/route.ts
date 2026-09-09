@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDBConnection, authorize } from "../db"; 
+import { resolveMediaUrl } from "@/lib/r2StorageManager";
 import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
@@ -117,7 +118,16 @@ if (action === "class_materials") {
     [class_id]
   );
 
-  return NextResponse.json(rows);
+  const resolved = Array.isArray(rows)
+    ? rows.map((r: any) => ({
+        ...r,
+        material_video_url: resolveMediaUrl(r.material_video_url),
+        material_pdf_url: resolveMediaUrl(r.material_pdf_url),
+        material_imageurl: resolveMediaUrl(r.material_imageurl),
+      }))
+    : [];
+
+  return NextResponse.json(resolved);
 }
 
 

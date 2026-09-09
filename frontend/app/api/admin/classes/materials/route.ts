@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDBConnection, authorize, getTenantMeta } from "../../../db";
 import { healDatabase } from "../../../dbHealer";
-import { uploadTenantMediaToR2 } from "@/lib/r2StorageManager";
+import { uploadTenantMediaToR2, resolveMediaUrl } from "@/lib/r2StorageManager";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -107,19 +107,31 @@ export async function GET(req: Request) {
     }
 
     if (materialId) {
-      const [materials] = await db.query(
+      const [materials]: any = await db.query(
         "SELECT * FROM class_material_list WHERE material_id = ?",
         [materialId]
       );
-      return NextResponse.json(materials);
+      const resolved = (materials as any[]).map((m: any) => ({
+        ...m,
+        material_video_url: resolveMediaUrl(m.material_video_url),
+        material_pdf_url: resolveMediaUrl(m.material_pdf_url),
+        material_imageurl: resolveMediaUrl(m.material_imageurl),
+      }));
+      return NextResponse.json(resolved);
     }
 
     if (classId) {
-      const [materials] = await db.query(
+      const [materials]: any = await db.query(
         "SELECT * FROM class_material_list WHERE class_id = ? ORDER BY display_order ASC, material_id DESC",
         [classId]
       );
-      return NextResponse.json(materials);
+      const resolved = (materials as any[]).map((m: any) => ({
+        ...m,
+        material_video_url: resolveMediaUrl(m.material_video_url),
+        material_pdf_url: resolveMediaUrl(m.material_pdf_url),
+        material_imageurl: resolveMediaUrl(m.material_imageurl),
+      }));
+      return NextResponse.json(resolved);
     }
 
     const [classes] = await db.query(`
