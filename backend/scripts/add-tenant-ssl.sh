@@ -43,7 +43,12 @@ fi
 
 echo "Certificate issued: $CERT"
 
-if grep -qF "$DOMAIN" "$CONF"; then
+# Ensure Nginx worker (www-data) has permission to read SSL certs and keys
+chmod 755 /etc/letsencrypt /etc/letsencrypt/live /etc/letsencrypt/archive 2>/dev/null || true
+chgrp -R www-data /etc/letsencrypt/live /etc/letsencrypt/archive 2>/dev/null || true
+chmod -R g+rX /etc/letsencrypt/live /etc/letsencrypt/archive 2>/dev/null || true
+
+if grep -qE "^\s*${DOMAIN}\s+" "$CONF"; then
   echo "$DOMAIN already in nginx map -- skipping."
 else
   sed -i "/# TENANT_CERTS_END/i\\    $DOMAIN $CERT;" "$CONF"
