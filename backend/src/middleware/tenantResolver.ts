@@ -17,18 +17,23 @@ declare global {
   }
 }
 
+// Paths that never need a tenant context
 const EXEMPT_PATHS = [
   "/api/v1/health",
-  "/api/v1/saas-admin/login",
-  "/api/v1/saas-admin/companies",
-  "/api/v1/saas-admin/tenants",
+  "/api/v1/saas-admin",
+];
+
+// Root/admin domains that should never be treated as tenant domains
+const ROOT_DOMAINS = [
+  process.env.ROOT_DOMAIN || "lms.circleone.asia",
+  `api.${process.env.ROOT_DOMAIN || "lms.circleone.asia"}`,
+  `cname.${process.env.ROOT_DOMAIN || "lms.circleone.asia"}`,
+  "localhost",
+  "127.0.0.1",
 ];
 
 export async function tenantResolver(req: Request, res: Response, next: NextFunction) {
   try {
-    // 1. Skip exemption paths
-    const isExempt = EXEMPT_PATHS.some((path) => req.path.startsWith(path));
-    
     const rawHost = (
       (req.headers["x-forwarded-host"] as string) ||
       req.headers.host ||
@@ -37,10 +42,21 @@ export async function tenantResolver(req: Request, res: Response, next: NextFunc
       .toLowerCase()
       .split(":")[0];
 
+    // 1. Skip resolution for root/admin domains — pass straight through
+    if (ROOT_DOMAINS.includes(rawHost)) {
+      return next();
+    }
+
+    // 2. Skip exempt API paths regardless of domain
+    const isExempt = EXEMPT_PATHS.some((path) => req.path.startsWith(path));
+    if (isExempt) {
+      return next();
+    }
+
     const explicitTenantId = req.headers["x-tenant-id"] as string | undefined;
     const explicitSlug = req.headers["x-tenant-slug"] as string | undefined;
 
-    // 2. Resolve tenant routing info
+    // 3. Resolve tenant routing info
     const route = await getTenantRouting({
       host: rawHost,
       tenantId: explicitTenantId,
@@ -59,15 +75,7 @@ export async function tenantResolver(req: Request, res: Response, next: NextFunc
       return dbStorage.run(tenantPool, () => next());
     }
 
-    if (isExempt) {
-      return next();
-    }
-
-    // Tenant could not be resolved and endpoint requires a tenant context
-    if (req.path.startsWith("/api/v1/saas-admin")) {
-      return next();
-    }
-
+    // 4. No tenant found for this domain
     return sendError(
       res,
       404,
@@ -78,3 +86,4 @@ export async function tenantResolver(req: Request, res: Response, next: NextFunc
     return sendError(res, 500, "TENANT_RESOLUTION_FAILED", err.message || "Failed to resolve tenant.");
   }
 }
+
