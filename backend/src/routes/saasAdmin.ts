@@ -3,7 +3,7 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { exec } from "child_process";
-import { pool, getTenantPool, dbStorage, dbQuery, cloneTenantSchema, clearRouteCache } from "../lib/db";
+import { pool, getTenantPool, dbStorage, dbQuery, cloneTenantSchema, clearRouteCache, CENTRAL_DB_NAME } from "../lib/db";
 import { checkCustomDomainDns } from "../lib/dnsVerifier";
 import { sendSuccess, sendError } from "../lib/routeUtils";
 import { authMiddleware, requireSuperAdmin } from "../middleware/auth";
@@ -14,6 +14,23 @@ const ROOT_DOMAIN = process.env.ROOT_DOMAIN || "lms.circleone.asia";
 const DEFAULT_CNAME = process.env.DEFAULT_CNAME_TARGET || "cname.lms.circleone.asia";
 const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL || "admin@circleone.asia";
 const SSL_SCRIPT = process.env.SSL_SCRIPT_PATH || "/var/www/global_lms/backend/scripts/add-tenant-ssl.sh";
+
+// Ensure SaaSTenant table has maxMediaStorageGb column
+async function ensureCentralTenantSchema() {
+  try {
+    const [cols] = await pool.query<any[]>(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'SaaSTenant' AND COLUMN_NAME = 'maxMediaStorageGb'",
+      [CENTRAL_DB_NAME]
+    );
+    if (cols.length === 0) {
+      await pool.query("ALTER TABLE SaaSTenant ADD COLUMN maxMediaStorageGb INT DEFAULT 10 AFTER maxStorageMb");
+      console.log("✅ Added maxMediaStorageGb column to SaaSTenant");
+    }
+  } catch (err: any) {
+    console.warn("Could not auto-migrate SaaSTenant schema:", err.message);
+  }
+}
+ensureCentralTenantSchema();
 
 /**
  * Provisions a Let's Encrypt SSL cert for a custom tenant domain.
@@ -143,7 +160,8 @@ router.get("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
   try {
     const [tenants] = await pool.execute<any[]>(
       `SELECT t.id, t.name, t.slug, t.email, t.phone, t.plan, t.monthlyPrice, t.status, 
-              t.dbName, t.maxStorageMb, t.licenseKey, t.startDate, t.expiryDate, t.createdAt,
+              t.dbName, t.maxStorageMb, COALESCE(t.maxMediaStorageGb, 10) AS maxMediaStorageGb,
+              t.licenseKey, t.startDate, t.expiryDate, t.createdAt,
               d.domain AS primaryDomain, d.type AS domainType, d.isVerified AS domainVerified
        FROM SaaSTenant t
        LEFT JOIN TenantDomain d ON t.id = d.tenantId AND d.isPrimary = 1
@@ -211,7 +229,8 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
       phone,
       plan = "Starter",
       monthlyPrice = "LKR 5,000",
-      maxStorageMb = 5000,
+      maxStorageMb = 500,
+      maxMediaStorageGb = 10,
       startDate,
       expiryDate,
       initialInvoiceAmount,
@@ -252,8 +271,8 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
 
     // 1. Insert Central SaaSTenant record
     await pool.execute(
-      `INSERT INTO SaaSTenant (id, name, slug, email, password, phone, plan, monthlyPrice, status, dbName, maxStorageMb, licenseKey, startDate, expiryDate)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)`,
+      `INSERT INTO SaaSTenant (id, name, slug, email, password, phone, plan, monthlyPrice, status, dbName, maxStorageMb, maxMediaStorageGb, licenseKey, startDate, expiryDate)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)`,
       [
         tenantId,
         name.trim(),
@@ -264,7 +283,8 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
         plan,
         monthlyPrice,
         dbName,
-        maxStorageMb,
+        parseInt(String(maxStorageMb), 10) || 500,
+        parseInt(String(maxMediaStorageGb), 10) || 10,
         licenseKey,
         normStartDate,
         normExpiryDate,
@@ -412,6 +432,66 @@ router.get("/tenants/:id", authMiddleware, async (req, res) => {
     return sendSuccess(res, tenant);
   } catch (err: any) {
     return sendError(res, 500, "FETCH_TENANT_FAILED", err.message || "Failed to retrieve tenant details.");
+  }
+});
+
+// 4.1 Update Tenant Details / Storage Quotas (Super Admin)
+router.patch("/tenants/:id", authMiddleware, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { maxStorageMb, maxMediaStorageGb, plan, monthlyPrice, status, name } = req.body;
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (maxStorageMb !== undefined) {
+      updates.push("maxStorageMb = ?");
+      values.push(parseInt(String(maxStorageMb), 10) || 500);
+    }
+    if (maxMediaStorageGb !== undefined) {
+      updates.push("maxMediaStorageGb = ?");
+      values.push(parseInt(String(maxMediaStorageGb), 10) || 10);
+    }
+    if (plan !== undefined) {
+      updates.push("plan = ?");
+      values.push(String(plan).trim());
+    }
+    if (monthlyPrice !== undefined) {
+      updates.push("monthlyPrice = ?");
+      values.push(String(monthlyPrice).trim());
+    }
+    if (status !== undefined) {
+      updates.push("status = ?");
+      values.push(String(status).trim());
+    }
+    if (name !== undefined) {
+      updates.push("name = ?");
+      values.push(String(name).trim());
+    }
+
+    if (updates.length === 0) {
+      return sendError(res, 400, "NO_UPDATES", "No fields provided to update.");
+    }
+
+    values.push(id);
+    const [result] = await pool.execute<any>(
+      `UPDATE SaaSTenant SET ${updates.join(", ")} WHERE id = ?`,
+      values
+    );
+
+    if (result.affectedRows === 0) {
+      return sendError(res, 404, "TENANT_NOT_FOUND", "Tenant not found.");
+    }
+
+    clearRouteCache();
+
+    return sendSuccess(
+      res,
+      { id, maxStorageMb, maxMediaStorageGb, plan, monthlyPrice, status },
+      "Tenant updated successfully."
+    );
+  } catch (err: any) {
+    return sendError(res, 500, "UPDATE_TENANT_FAILED", err.message || "Failed to update tenant.");
   }
 });
 

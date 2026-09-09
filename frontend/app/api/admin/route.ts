@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getDBConnection, authorize } from "../db";
-import fetch from "node-fetch";
+import { getDBConnection, authorize, getTenantMeta } from "../db";
+import { getTenantLocalStorageUsage } from "@/lib/localStorageManager";
+import { getTenantR2StorageUsage } from "@/lib/r2StorageManager";
 
 export async function GET(req: Request) {
   try {
@@ -94,10 +95,16 @@ export async function GET(req: Request) {
     
     // const user = data.lashinigeo;
 
+    const meta = await getTenantMeta(req);
+    const localUsage = getTenantLocalStorageUsage(meta.tenantId, meta.maxStorageMb);
+    const mediaUsage = await getTenantR2StorageUsage(meta.tenantId, meta.maxMediaStorageGb);
+
     return NextResponse.json({
-      storage:{
-        totalMB: Number(0),
-        usedMB: Number(0),
+      storage: {
+        totalMB: localUsage.totalMB,
+        usedMB: localUsage.usedMB,
+        local: localUsage,
+        media: mediaUsage,
       },
       classes,
       users,

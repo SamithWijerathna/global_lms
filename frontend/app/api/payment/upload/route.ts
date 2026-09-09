@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
 import { sessionOptions } from "@/lib/session";
-import { getDBConnection } from "../../../api/db";
+import { getDBConnection, getTenantMeta } from "../../../api/db";
+import { saveTenantLocalFile } from "@/lib/localStorageManager";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
@@ -46,16 +47,24 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "receipts");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = path.extname(file.name);
-    const filename = `${receipt_id}${ext}`;
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
+
+    const meta = await getTenantMeta(req);
+    let saveResult;
+    try {
+      saveResult = await saveTenantLocalFile({
+        tenantId: meta.tenantId,
+        category: "receipts",
+        fileBuffer: buffer,
+        originalFileName: file.name,
+        maxStorageMb: meta.maxStorageMb,
+      });
+    } catch (quotaErr: any) {
+      return NextResponse.json(
+        { error: quotaErr.message || "Storage quota exceeded" },
+        { status: 413 }
+      );
+    }
 
     const db = await getDBConnection();
     await db.query(
@@ -68,7 +77,7 @@ export async function POST(req: Request) {
         amount,
         itemId,
         bank,
-        "uploads/receipts/" + filename,
+        saveResult.relativeUrl,
         itemType,
         "pending",
       ]

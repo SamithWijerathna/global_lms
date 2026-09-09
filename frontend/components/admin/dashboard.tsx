@@ -66,55 +66,57 @@ export default function DashboardHome() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [progressValue, setProgressValue] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [storage, setStorage] = useState<{ totalMB: number; usedMB: number } | null>(null);
 
-const usedGB = storage
-  ? (storage.usedMB / 1024).toFixed(1)
-  : "0.0";
+  interface StorageTier {
+    usedMB?: number;
+    totalMB?: number;
+    usedGB?: number;
+    totalGB?: number;
+    percentage: number;
+    remainingMB?: number;
+    remainingGB?: number;
+  }
 
-const totalGB = storage
-  ? (storage.totalMB / 1024).toFixed(1)
-  : "0.0";
+  interface StorageResponse {
+    totalMB: number;
+    usedMB: number;
+    local?: StorageTier;
+    media?: StorageTier;
+  }
 
-const storagePercentage =
-  storage && storage.totalMB > 0
-    ? Math.round((storage.usedMB / storage.totalMB) * 100)
-    : 0;
+  const [storage, setStorage] = useState<StorageResponse | null>(null);
+  const [activeStorageTab, setActiveStorageTab] = useState<"local" | "media">("local");
 
-const remainingPercentage = 100 - storagePercentage;
+  const localUsedMB = storage?.local?.usedMB ?? storage?.usedMB ?? 0;
+  const localTotalMB = storage?.local?.totalMB ?? storage?.totalMB ?? 500;
+  const localPercentage = storage?.local?.percentage ?? (localTotalMB > 0 ? Math.round((localUsedMB / localTotalMB) * 100) : 0);
 
-// Proportional breakdown (based on your original percentages)
-const videoGB = storage ? ((storage.usedMB * 0.44) / 1024).toFixed(1) : "2.7";
-const docGB = storage ? ((storage.usedMB * 0.27) / 1024).toFixed(1) : "1.7";
-const imageGB = storage ? ((storage.usedMB * 0.21) / 1024).toFixed(1) : "1.3";
-const otherGB = storage ? ((storage.usedMB * 0.08) / 1024).toFixed(1) : "0.5";
+  const mediaUsedGB = storage?.media?.usedGB ?? 0;
+  const mediaTotalGB = storage?.media?.totalGB ?? 10;
+  const mediaPercentage = storage?.media?.percentage ?? (mediaTotalGB > 0 ? Math.round((mediaUsedGB / mediaTotalGB) * 100) : 0);
 
- useEffect(() => {
-  fetch("/api/admin", {
-    headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET_TOKEN || ""}` },
-  })
-    .then((res) => res.json())
-    .then((json) => {
-      setData(json);
+  const currentPercentage = activeStorageTab === "local" ? localPercentage : mediaPercentage;
+  const currentRemaining = 100 - currentPercentage;
 
-      setStorage({
-        usedMB: json.storage.usedMB,
-        totalMB: json.storage.totalMB,
-      });
-
-      setProgressValue(
-        json.storage.totalMB > 0
-          ? Math.round((json.storage.usedMB / json.storage.totalMB) * 100)
-          : 0
-      );
-
-      setLoading(false);
+  useEffect(() => {
+    fetch("/api/admin", {
+      headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET_TOKEN || ""}` },
     })
-    .catch((err) => {
-      console.error(err);
-      setLoading(false);
-    });
-}, []);
+      .then((res) => res.json())
+      .then((json) => {
+        setData(json);
+
+        if (json.storage) {
+          setStorage(json.storage);
+        }
+
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load dashboard data:", err);
+        setLoading(false);
+      });
+  }, []);
 
 
 
@@ -190,64 +192,98 @@ const otherGB = storage ? ((storage.usedMB * 0.08) / 1024).toFixed(1) : "0.5";
           {/* Storage - Unchanged */}
           {/* Storage Usage - Dynamically Updated from API */}
 <Card className="relative overflow-hidden shadow-2xl hover:shadow-3xl transition-shadow duration-500 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-3xl group">
-  <CardHeader className="text-2xl font-bold text-center pb-4">Storage Usage</CardHeader>
-  <CardBody className="p-8 flex flex-col items-center justify-center">
+  <CardHeader className="flex flex-col items-center pb-2 pt-6">
+    <span className="text-2xl font-bold text-center">Storage Usage</span>
+    {/* Tier Switcher Pill */}
+    <div className="flex gap-2 mt-3 bg-default-100 p-1 rounded-full border border-default-200">
+      <button
+        type="button"
+        className={`px-3 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 ${
+          activeStorageTab === "local"
+            ? "bg-primary text-white shadow"
+            : "text-default-600 hover:text-foreground"
+        }`}
+        onClick={() => setActiveStorageTab("local")}
+      >
+        <span>📁 App Storage</span>
+        <span className="opacity-80">({localTotalMB} MB)</span>
+      </button>
+      <button
+        type="button"
+        className={`px-3 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 ${
+          activeStorageTab === "media"
+            ? "bg-purple-600 text-white shadow"
+            : "text-default-600 hover:text-foreground"
+        }`}
+        onClick={() => setActiveStorageTab("media")}
+      >
+        <span>☁️ Cloud Media</span>
+        <span className="opacity-80">({mediaTotalGB} GB)</span>
+      </button>
+    </div>
+  </CardHeader>
+  <CardBody className="p-6 flex flex-col items-center justify-center">
     <CircularProgress
       aria-label="Storage usage"
       size="lg"
-      value={loading ? 0 : storagePercentage}  // Dynamic from API
-      color="success"  // Low usage = green/success
+      value={loading ? 0 : currentPercentage}
+      color={currentPercentage > 85 ? "danger" : currentPercentage > 60 ? "warning" : activeStorageTab === "media" ? "secondary" : "success"}
       showValueLabel={true}
       classNames={{
-        svg: "w-64 h-64 drop-shadow-lg",
-        indicator: "stroke-green-500",
+        svg: "w-56 h-56 drop-shadow-lg",
+        indicator: activeStorageTab === "media" ? "stroke-purple-500" : currentPercentage > 85 ? "stroke-red-500" : "stroke-green-500",
         track: "stroke-gray-200 dark:stroke-gray-700",
-        value: "text-5xl font-bold",
+        value: "text-4xl font-bold",
       }}
       formatOptions={{ style: "percent" }}
     />
-    <div className="mt-8 text-center">
+    <div className="mt-6 text-center">
       {loading ? (
         <>
-          <Skeleton className="h-10 w-48 rounded mb-4" />
-          <Skeleton className="h-6 w-64 rounded" />
+          <Skeleton className="h-8 w-44 rounded mb-2" />
+          <Skeleton className="h-5 w-56 rounded" />
+        </>
+      ) : activeStorageTab === "local" ? (
+        <>
+          <p className="text-2xl font-bold">{localUsedMB} MB / {localTotalMB} MB</p>
+          <p className="text-xs text-default-500 mt-1">Student Avatars, Payment Slips & Covers</p>
+          <p className="text-sm text-success font-medium mt-2">
+            {currentRemaining}% space available ({storage?.local?.remainingMB ?? (localTotalMB - localUsedMB)} MB remaining)
+          </p>
         </>
       ) : (
         <>
-          <p className="text-3xl font-bold">{usedGB} GB / {totalGB} GB</p>
-          <p className="text-lg text-success font-medium mt-4">Plenty of space available ({remainingPercentage}% remaining)</p>
+          <p className="text-2xl font-bold">{mediaUsedGB} GB / {mediaTotalGB} GB</p>
+          <p className="text-xs text-default-500 mt-1">Cloudflare R2: Course Videos, PDFs & Materials</p>
+          <p className="text-sm text-purple-600 font-medium mt-2">
+            {currentRemaining}% space available ({storage?.media?.remainingGB ?? (mediaTotalGB - mediaUsedGB)} GB remaining)
+          </p>
         </>
       )}
     </div>
-    {/* Hover Overlay - Dynamic Breakdown (proportional to used) */}
-    <div className="absolute inset-0 rounded-3xl bg-white/80 dark:bg-black/80 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out flex items-center justify-center z-20">
-      <div className="text-center space-y-6 px-8">
-        <h3 className="text-2xl font-bold">Storage Breakdown</h3>
-        {loading ? (
-          <div className="space-y-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-8 w-64 rounded mx-auto" />)}
+
+    {/* Hover Overlay - Dual Tier Breakdown */}
+    <div className="absolute inset-0 rounded-3xl bg-white/90 dark:bg-black/90 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-500 ease-out flex items-center justify-center z-20">
+      <div className="text-center space-y-4 px-6 w-full max-w-xs">
+        <h3 className="text-xl font-bold">Storage Tiers</h3>
+        <div className="p-3 bg-default-50 rounded-xl border border-default-200 text-left space-y-1">
+          <div className="flex justify-between items-center text-sm font-semibold">
+            <span>📁 App Essentials (Local)</span>
+            <span className="text-primary font-bold">{localPercentage}%</span>
           </div>
-        ) : (
-          <div className="space-y-4 text-left max-w-sm mx-auto text-lg">
-            <div className="flex justify-between">
-              <span className="text-default-700">Videos</span>
-              <span className="font-semibold">{videoGB} GB (44%)</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-default-700">Documents</span>
-              <span className="font-semibold">{docGB} GB (27%)</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-default-700">Images</span>
-              <span className="font-semibold">{imageGB} GB (21%)</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-default-700">Other</span>
-              <span className="font-semibold">{otherGB} GB (8%)</span>
-            </div>
+          <p className="text-xs text-default-500">{localUsedMB} MB of {localTotalMB} MB used</p>
+          <p className="text-[11px] text-default-400">Profiles, Receipts & Covers</p>
+        </div>
+
+        <div className="p-3 bg-purple-50/30 rounded-xl border border-purple-200 text-left space-y-1">
+          <div className="flex justify-between items-center text-sm font-semibold text-purple-700 dark:text-purple-300">
+            <span>☁️ Cloud Media (R2)</span>
+            <span className="font-bold">{mediaPercentage}%</span>
           </div>
-        )}
-        <p className="text-success font-semibold pt-4">{remainingPercentage}% space remaining!</p>
+          <p className="text-xs text-default-500">{mediaUsedGB} GB of {mediaTotalGB} GB used</p>
+          <p className="text-[11px] text-default-400">Videos, Documents & Materials</p>
+        </div>
+        <p className="text-xs text-default-400 italic">Click the tabs above to toggle view</p>
       </div>
     </div>
   </CardBody>

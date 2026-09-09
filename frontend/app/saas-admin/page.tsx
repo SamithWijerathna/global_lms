@@ -34,6 +34,8 @@ interface TenantItem {
   monthlyPrice: string;
   status: string;
   dbName: string;
+  maxStorageMb?: number;
+  maxMediaStorageGb?: number;
   primaryDomain?: string;
   domainVerified?: number;
   licenseKey?: string;
@@ -71,10 +73,18 @@ export default function SaaSAdminPage() {
     phone: "",
     plan: "Standard",
     monthlyPrice: "LKR 5,000",
+    maxStorageMb: "500",
+    maxMediaStorageGb: "10",
     customDomain: "",
     initialInvoiceAmount: "5000",
   });
   const [createdResult, setCreatedResult] = useState<any>(null);
+
+  // Storage Quota Editing State
+  const [editingStorageTenant, setEditingStorageTenant] = useState<TenantItem | null>(null);
+  const [editLocalMb, setEditLocalMb] = useState(500);
+  const [editMediaGb, setEditMediaGb] = useState(10);
+  const [savingStorage, setSavingStorage] = useState(false);
 
   // Tenant Deletion State
   const [deletingTenant, setDeletingTenant] = useState<TenantItem | null>(null);
@@ -235,6 +245,42 @@ export default function SaaSAdminPage() {
     }
   };
 
+  const handleOpenStorageModal = (t: TenantItem) => {
+    setEditingStorageTenant(t);
+    setEditLocalMb(t.maxStorageMb || 500);
+    setEditMediaGb(t.maxMediaStorageGb || 10);
+  };
+
+  const handleUpdateStorage = async () => {
+    if (!editingStorageTenant) return;
+    setSavingStorage(true);
+    const apiUrl = getBackendApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/saas-admin/tenants/${editingStorageTenant.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          maxStorageMb: editLocalMb,
+          maxMediaStorageGb: editMediaGb,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingStorageTenant(null);
+        fetchTenants(token);
+      } else {
+        alert(data.error?.message || "Failed to update storage quotas.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Network error while updating storage quotas.");
+    } finally {
+      setSavingStorage(false);
+    }
+  };
+
   const handleProvisionSsl = async (tenantId: string) => {
     setProvisioningSslId(tenantId);
     const apiUrl = getBackendApiUrl();
@@ -373,6 +419,7 @@ export default function SaaSAdminPage() {
               <TableColumn>DATABASE NAME</TableColumn>
               <TableColumn>ADMIN EMAIL</TableColumn>
               <TableColumn>PLAN / PRICE</TableColumn>
+              <TableColumn>STORAGE QUOTAS</TableColumn>
               <TableColumn>DOMAIN STATUS</TableColumn>
               <TableColumn>CREATED DATE</TableColumn>
               <TableColumn align="center">ACTIONS</TableColumn>
@@ -397,6 +444,22 @@ export default function SaaSAdminPage() {
                     </div>
                   </TableCell>
                   <TableCell>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-default-500 font-medium">📁 Local:</span>
+                        <Chip size="sm" variant="flat" color="primary">
+                          {t.maxStorageMb || 500} MB
+                        </Chip>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-default-500 font-medium">☁️ Media:</span>
+                        <Chip size="sm" variant="flat" color="secondary">
+                          {t.maxMediaStorageGb || 10} GB
+                        </Chip>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <Chip size="sm" color="success" variant="flat">
                       Active CNAME
                     </Chip>
@@ -406,6 +469,14 @@ export default function SaaSAdminPage() {
                   </TableCell>
                   <TableCell align="center">
                     <div className="flex gap-2 justify-center">
+                      <Button
+                        size="sm"
+                        color="secondary"
+                        variant="flat"
+                        onPress={() => handleOpenStorageModal(t)}
+                      >
+                        ⚙️ Quotas
+                      </Button>
                       <Button
                         size="sm"
                         color="primary"
@@ -515,6 +586,28 @@ export default function SaaSAdminPage() {
                         value={formData.initialInvoiceAmount}
                         onValueChange={(v) => setFormData({ ...formData, initialInvoiceAmount: v })}
                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded-xl bg-default-50 border border-default-200">
+                      <Input
+                        label="📁 Local Storage Quota (MB)"
+                        description="For user photos, receipts & covers (default: 500 MB)"
+                        type="number"
+                        placeholder="500"
+                        value={formData.maxStorageMb}
+                        onValueChange={(v) => setFormData({ ...formData, maxStorageMb: v })}
+                      />
+                      <Select
+                        label="☁️ Cloud Media Quota (R2)"
+                        description="For course videos, PDFs & materials"
+                        selectedKeys={[formData.maxMediaStorageGb]}
+                        onChange={(e) => setFormData({ ...formData, maxMediaStorageGb: e.target.value })}
+                      >
+                        <SelectItem key="10">10 GB (Standard)</SelectItem>
+                        <SelectItem key="20">20 GB (+10 GB)</SelectItem>
+                        <SelectItem key="50">50 GB (+40 GB)</SelectItem>
+                        <SelectItem key="100">100 GB (Enterprise)</SelectItem>
+                      </Select>
                     </div>
 
                     {/* CNAME Verification Guide & Check Section */}
@@ -643,6 +736,94 @@ export default function SaaSAdminPage() {
                 </Button>
                 <Button color="danger" isLoading={deleting} onPress={handleDeleteTenant}>
                   Confirm Delete
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Storage Quotas Modal */}
+      <Modal isOpen={!!editingStorageTenant} onOpenChange={(open) => !open && setEditingStorageTenant(null)} size="lg">
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>
+                <h3 className="text-lg font-bold">
+                  ⚙️ Assign Storage Quotas: {editingStorageTenant?.name}
+                </h3>
+              </ModalHeader>
+              <ModalBody className="space-y-4">
+                <p className="text-sm text-default-600">
+                  Assign independent storage tiers for <strong>{editingStorageTenant?.primaryDomain || editingStorageTenant?.slug}</strong>.
+                </p>
+
+                {/* Local Storage Tier */}
+                <div className="p-4 rounded-xl border border-default-200 bg-default-50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-sm">📁 Local Storage Quota</h4>
+                      <p className="text-xs text-default-500">For student profiles, payment receipts, and cover images</p>
+                    </div>
+                    <Chip color="primary" variant="flat" size="sm">VPS Local Disk</Chip>
+                  </div>
+                  <div className="flex gap-2">
+                    {[500, 1000, 2000].map((mb) => (
+                      <Button
+                        key={mb}
+                        size="sm"
+                        variant={editLocalMb === mb ? "solid" : "flat"}
+                        color="primary"
+                        onPress={() => setEditLocalMb(mb)}
+                      >
+                        {mb >= 1000 ? `${mb / 1000} GB` : `${mb} MB`}
+                      </Button>
+                    ))}
+                  </div>
+                  <Input
+                    label="Custom Local Quota (MB)"
+                    type="number"
+                    value={String(editLocalMb)}
+                    onValueChange={(v) => setEditLocalMb(parseInt(v, 10) || 500)}
+                  />
+                </div>
+
+                {/* Cloudflare R2 Media Tier */}
+                <div className="p-4 rounded-xl border border-secondary-200 bg-secondary-50/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-sm">☁️ Cloud Media Quota</h4>
+                      <p className="text-xs text-default-500">For heavy course videos, PDFs, and study pack materials</p>
+                    </div>
+                    <Chip color="secondary" variant="flat" size="sm">Cloudflare R2</Chip>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[10, 20, 50, 100].map((gb) => (
+                      <Button
+                        key={gb}
+                        size="sm"
+                        variant={editMediaGb === gb ? "solid" : "flat"}
+                        color="secondary"
+                        onPress={() => setEditMediaGb(gb)}
+                      >
+                        {gb} GB
+                      </Button>
+                    ))}
+                  </div>
+                  <Input
+                    label="Custom Cloud Media Quota (GB)"
+                    type="number"
+                    value={String(editMediaGb)}
+                    onValueChange={(v) => setEditMediaGb(parseInt(v, 10) || 10)}
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="flat" onPress={onClose} isDisabled={savingStorage}>
+                  Cancel
+                </Button>
+                <Button color="primary" isLoading={savingStorage} onPress={handleUpdateStorage}>
+                  Save Quotas
                 </Button>
               </ModalFooter>
             </>

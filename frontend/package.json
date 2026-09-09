@@ -10,6 +10,7 @@
     "lint": "eslint --fix"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1128.0",
     "@casoon/tailwindcss-glass": "^0.9.7",
     "@gsap/react": "^2.1.2",
     "@heroui/accordion": "2.2.26",

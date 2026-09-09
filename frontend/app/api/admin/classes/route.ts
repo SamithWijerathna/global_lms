@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDBConnection, authorize } from "../../db";
+import { getDBConnection, authorize, getTenantMeta } from "../../db";
+import { saveTenantLocalFile } from "@/lib/localStorageManager";
 import fs from "fs";
 import path from "path";
 
@@ -59,14 +60,19 @@ export async function POST(req: Request) {
     let class_imageurl = null;
     if (image && image.size > 0) {
       const buffer = Buffer.from(await image.arrayBuffer());
-      const uploadsDir = path.join(process.cwd(), "public", "uploads");
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-      
-      const ext = path.extname(image.name) || ".jpg";
-      const fileName = `${class_id}${ext}`;
-      
-      fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
-      class_imageurl = `/uploads/${fileName}`;
+      const meta = await getTenantMeta(req);
+      try {
+        const saveRes = await saveTenantLocalFile({
+          tenantId: meta.tenantId,
+          category: "covers",
+          fileBuffer: buffer,
+          originalFileName: image.name || `${class_id}.jpg`,
+          maxStorageMb: meta.maxStorageMb,
+        });
+        class_imageurl = saveRes.relativeUrl;
+      } catch (storageErr: any) {
+        return NextResponse.json({ error: storageErr.message }, { status: 413 });
+      }
     }
 
     await db.query(
@@ -105,13 +111,19 @@ export async function PUT(req: Request) {
 
   if (image && image.size > 0) {
     const buffer = Buffer.from(await image.arrayBuffer());
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "classes");
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-    const ext = path.extname(image.name) || ".jpg";
-    const fileName = `${class_id}${ext}`;
-    fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
-    class_imageurl = `/uploads/classes/${fileName}`;
+    const meta = await getTenantMeta(req);
+    try {
+      const saveRes = await saveTenantLocalFile({
+        tenantId: meta.tenantId,
+        category: "covers",
+        fileBuffer: buffer,
+        originalFileName: image.name || `${class_id}.jpg`,
+        maxStorageMb: meta.maxStorageMb,
+      });
+      class_imageurl = saveRes.relativeUrl;
+    } catch (storageErr: any) {
+      return NextResponse.json({ error: storageErr.message }, { status: 413 });
+    }
   }
 
   await db.query(

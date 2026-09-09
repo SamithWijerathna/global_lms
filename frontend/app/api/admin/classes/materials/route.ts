@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDBConnection, authorize } from "../../../db";
+import { getDBConnection, authorize, getTenantMeta } from "../../../db";
+import { uploadTenantMediaToR2 } from "@/lib/r2StorageManager";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -233,13 +234,29 @@ export async function POST(req: Request) {
       const finalName = fileType === "video" ? `${materialId}_video${ext}` :
                         fileType === "pdf" ? `${materialId}_pdf${ext}` :
                         `${materialId}${ext}`;
-      const finalPath = path.join(uploadDir, finalName);
 
-      // Move file to final location
-      await fs.rename(tempPath, finalPath);
+      const meta = await getTenantMeta(req);
+      const fileBuffer = await fs.readFile(tempPath);
 
-      const fileUrl = `/uploads/materials/${finalName}`;
-      console.log(`File finalized: ${fileUrl} (${stats.size} bytes)`);
+      let r2Res;
+      try {
+        r2Res = await uploadTenantMediaToR2({
+          tenantId: meta.tenantId,
+          fileBuffer,
+          originalFileName: finalName,
+          contentType: fileType === "video" ? "video/mp4" : fileType === "pdf" ? "application/pdf" : "image/jpeg",
+          maxMediaStorageGb: meta.maxMediaStorageGb,
+        });
+        await fs.unlink(tempPath);
+      } catch (r2Err: any) {
+        return NextResponse.json({
+          error: r2Err.message || "Cloud media storage quota exceeded",
+          success: false
+        }, { status: 413 });
+      }
+
+      const fileUrl = r2Res.url;
+      console.log(`Material file uploaded [${r2Res.provider}]: ${fileUrl} (${stats.size} bytes)`);
 
       return NextResponse.json({ 
         success: true, 

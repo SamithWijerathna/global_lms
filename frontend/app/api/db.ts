@@ -234,3 +234,76 @@ export async function authorize(req: Request, db?: any) {
 
   return { error: "Unauthorized", status: 401 };
 }
+
+export interface TenantMeta {
+  tenantId: string;
+  slug: string;
+  dbName: string;
+  name: string;
+  maxStorageMb: number;
+  maxMediaStorageGb: number;
+}
+
+export async function getTenantMeta(contextOrReq?: Request | Headers | string): Promise<TenantMeta> {
+  let domain: string | null = null;
+  let slug: string | null = null;
+
+  if (typeof contextOrReq === "string") {
+    domain = contextOrReq.replace(/:\d+$/, "").toLowerCase().trim();
+  } else if (contextOrReq && "headers" in contextOrReq) {
+    const h = contextOrReq.headers;
+    domain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
+    slug = h.get("x-tenant-slug");
+  } else if (contextOrReq && typeof (contextOrReq as any).get === "function") {
+    const h = contextOrReq as Headers;
+    domain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
+    slug = h.get("x-tenant-slug");
+  } else {
+    try {
+      const h = await headers();
+      domain = h.get("x-custom-domain") || h.get("x-tenant-domain") || h.get("x-forwarded-host") || h.get("host");
+      slug = h.get("x-tenant-slug");
+    } catch (_) {}
+  }
+
+  if (domain) domain = domain.replace(/:\d+$/, "").toLowerCase().trim();
+  if (slug) slug = slug.toLowerCase().trim();
+
+  try {
+    const cp = getCentralPool();
+    if (domain) {
+      const [rows] = await cp.execute<any[]>(
+        `SELECT t.id as tenantId, t.slug, t.dbName, t.name, 
+                COALESCE(t.maxStorageMb, 500) as maxStorageMb, 
+                COALESCE(t.maxMediaStorageGb, 10) as maxMediaStorageGb 
+         FROM TenantRouting r
+         JOIN SaaSTenant t ON r.tenantId = t.id
+         WHERE LOWER(r.domain) = ? AND r.status = 'active' LIMIT 1`,
+        [domain]
+      );
+      if (rows.length > 0) return rows[0];
+    }
+    if (slug) {
+      const [rows] = await cp.execute<any[]>(
+        `SELECT t.id as tenantId, t.slug, t.dbName, t.name, 
+                COALESCE(t.maxStorageMb, 500) as maxStorageMb, 
+                COALESCE(t.maxMediaStorageGb, 10) as maxMediaStorageGb 
+         FROM SaaSTenant t
+         WHERE LOWER(t.slug) = ? AND t.status = 'active' LIMIT 1`,
+        [slug]
+      );
+      if (rows.length > 0) return rows[0];
+    }
+  } catch (err: any) {
+    console.warn("[TENANT META WARN]", err.message);
+  }
+
+  return {
+    tenantId: "default",
+    slug: "default",
+    dbName: defaultDb,
+    name: "Default Tenant",
+    maxStorageMb: 500,
+    maxMediaStorageGb: 10,
+  };
+}

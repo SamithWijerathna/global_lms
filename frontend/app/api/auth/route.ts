@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 import { Resend } from "resend";
 import fs from "fs";
 import path from "path";
-import { getDBConnection } from "../db";
+import { getDBConnection, getTenantMeta } from "../db";
+import { saveTenantLocalFile } from "@/lib/localStorageManager";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 
@@ -147,17 +148,21 @@ export async function POST(req: Request) {
         // Handle profile image upload
         let profileUrl = null;
         if (profileFile && profileFile.size > 0) {
-          const uploadDir = path.join(process.cwd(), "public", "uploads", "profile");
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          }
           const arrayBuffer = await profileFile.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
-          const ext = path.extname(profileFile.name) || ".jpg";
-          const filename = `${newStudentId}${ext}`;
-          const filepath = path.join(uploadDir, filename);
-          fs.writeFileSync(filepath, buffer);
-          profileUrl = `/uploads/profile/${filename}`;
+          const meta = await getTenantMeta(req);
+          try {
+            const saveRes = await saveTenantLocalFile({
+              tenantId: meta.tenantId,
+              category: "profiles",
+              fileBuffer: buffer,
+              originalFileName: profileFile.name || `${newStudentId}.jpg`,
+              maxStorageMb: meta.maxStorageMb,
+            });
+            profileUrl = saveRes.relativeUrl;
+          } catch (storageErr: any) {
+            return NextResponse.json({ error: storageErr.message }, { status: 413 });
+          }
         }
 
         // Hash password and insert user
@@ -601,25 +606,35 @@ export async function PUT(req: Request) {
        
         const arrayBuffer = await profileFile.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const ext = path.extname(profileFile.name) || ".jpg";
-        const filename = `${student_id || Date.now()}${ext}`;
-        const filepath = path.join(uploadDir, filename);
-       
+        const meta = await getTenantMeta(req);
+
         // Delete old profile image if exists
-        const [existingUser] = await db.query(
-          "SELECT profile_url FROM users WHERE uuid = ?",
-          [uuid]
-        );
-        const oldProfileUrl = (existingUser as any[])[0]?.profile_url;
-        if (oldProfileUrl) {
-          const oldFilepath = path.join(process.cwd(), "public", oldProfileUrl);
-          if (fs.existsSync(oldFilepath)) {
-            fs.unlinkSync(oldFilepath);
+        try {
+          const [existingUser] = await db.query(
+            "SELECT profile_url FROM users WHERE uuid = ?",
+            [uuid]
+          );
+          const oldProfileUrl = (existingUser as any[])[0]?.profile_url;
+          if (oldProfileUrl && !oldProfileUrl.startsWith("http")) {
+            const oldFilepath = path.join(process.cwd(), "public", oldProfileUrl);
+            if (fs.existsSync(oldFilepath)) {
+              fs.unlinkSync(oldFilepath);
+            }
           }
+        } catch (_) {}
+
+        try {
+          const saveRes = await saveTenantLocalFile({
+            tenantId: meta.tenantId,
+            category: "profiles",
+            fileBuffer: buffer,
+            originalFileName: profileFile.name || `${student_id || uuid}.jpg`,
+            maxStorageMb: meta.maxStorageMb,
+          });
+          profileUrl = saveRes.relativeUrl;
+        } catch (storageErr: any) {
+          return NextResponse.json({ error: storageErr.message }, { status: 413 });
         }
-       
-        fs.writeFileSync(filepath, buffer);
-        profileUrl = `/uploads/profile/${filename}`;
       }
      
       // Build update query dynamically
