@@ -12,12 +12,12 @@ export interface SystemSettings {
 }
 
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
-  site_title: "LASHINIGEO LMS",
-  site_short_name: "LASHINIGEO",
+  site_title: "Volit LMS",
+  site_short_name: "Volit",
   site_logo_url: "/assets/logo.png",
-  site_favicon_url: "/favicon.ico",
-  copyright_text: "© 2026 Lashinigeo LMS. All rights reserved.",
-  contact_email: "support@lashinigeo.lk",
+  site_favicon_url: "/assets/logo-icon.png",
+  copyright_text: "© 2026 Volit. All rights reserved.",
+  contact_email: "support@volit.lk",
   contact_phone: "+94 77 123 4567",
 };
 

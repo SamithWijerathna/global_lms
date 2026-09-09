@@ -16,8 +16,8 @@ export async function POST(req) {
 
 
     const adminMail = {
-      from: `"Lashinigeo Website" <${process.env.SMTP_USER}>`,
-      to: "support@lashinigeo.lk",
+      from: `"Volit Website" <${process.env.SMTP_USER}>`,
+      to: "support@volit.lk",
       subject: `New Contact Form Submission - ${name}`,
       html: `
         <h2>New Contact Form Message</h2>
@@ -25,22 +25,22 @@ export async function POST(req) {
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Message:</strong><br/>${message}</p>
         <hr/>
-        <p>This message was sent from the Lashinigeo.lk contact form.</p>
+        <p>This message was sent from the Volit contact form.</p>
       `,
     };
 
     const userMail = {
-      from: `"Lashinigeo Support" <${process.env.SMTP_USER}>`,
+      from: `"Volit Support" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: "We’ve received your message - Lashinigeo.lk",
+      subject: "We’ve received your message - Volit",
       html: `
         <h3>Hi ${name},</h3>
-        <p>Thank you for contacting <strong>Lashinigeo</strong>.</p>
+        <p>Thank you for contacting <strong>Volit</strong>.</p>
         <p>We’ve received your message and our support team will get back to you shortly.</p>
         <blockquote style="border-left:4px solid #ddd;padding-left:8px;margin:10px 0;">
           ${message}
         </blockquote>
-        <p>Best regards,<br/>The Lashinigeo Support Team<br/><a href="https://lashinigeo.lk">lashinigeo.lk</a></p>
+        <p>Best regards,<br/>The Volit Support Team<br/><a href="https://volit.lk">volit.lk</a></p>
       `,
     };
 

@@ -243,7 +243,7 @@ export function DomainSettingsTab() {
                 <span className="font-bold text-foreground block mb-1">Option 2: TXT Verification Record</span>
                 <p className="text-default-500 mb-2">Or add a TXT verification challenge record:</p>
                 <div className="flex items-center justify-between bg-default-100 p-2 rounded font-mono truncate">
-                  <span className="truncate">globallms-verification=&lt;token&gt;</span>
+                  <span className="truncate">volit-verification=&lt;token&gt;</span>
                   <span className="text-default-400 text-[10px]">Auto-generated</span>
                 </div>
               </div>

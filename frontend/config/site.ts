@@ -1,8 +1,8 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
-  name: "Lashinigeo",
-  description: "Make beautiful websites regardless of your design experience.",
+  name: "Volit",
+  description: "Volit LMS Platform.",
   navItems: [
     {
       label: "Home",

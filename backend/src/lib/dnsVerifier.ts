@@ -31,8 +31,8 @@ export async function checkCustomDomainDns(
     // No CNAME found or domain not resolved
   }
 
-  // 2. Check TXT record verification (e.g. globallms-verification=<token>)
-  const expectedTxtPrefix = `globallms-verification=${expectedToken}`;
+  // 2. Check TXT record verification (e.g. volit-verification=<token>)
+  const expectedTxtPrefix = `volit-verification=${expectedToken}`;
   try {
     const txtRecords = await dns.resolveTxt(cleanDomain);
     currentTxts = txtRecords.flat();
@@ -43,10 +43,10 @@ export async function checkCustomDomainDns(
     // No TXT record found
   }
 
-  // Fallback: check TXT record on subdomain _globallms-challenge.<domain>
+  // Fallback: check TXT record on subdomain _volit-challenge.<domain>
   if (!txtMatched) {
     try {
-      const challengeDomain = `_globallms-challenge.${cleanDomain}`;
+      const challengeDomain = `_volit-challenge.${cleanDomain}`;
       const challengeTxts = (await dns.resolveTxt(challengeDomain)).flat();
       currentTxts.push(...challengeTxts);
       txtMatched = challengeTxts.some(

@@ -15,12 +15,12 @@ export interface SystemSettings {
 }
 
 const defaultSettings: SystemSettings = {
-  site_title: "LASHINIGEO LMS",
-  site_short_name: "LASHINIGEO",
+  site_title: "Volit LMS",
+  site_short_name: "Volit",
   site_logo_url: "/assets/logo.png",
-  site_favicon_url: "/favicon.ico",
-  copyright_text: "© 2026 Lashinigeo LMS. All rights reserved.",
-  contact_email: "support@lashinigeo.lk",
+  site_favicon_url: "/assets/logo-icon.png",
+  copyright_text: "© 2026 Volit. All rights reserved.",
+  contact_email: "support@volit.lk",
   contact_phone: "+94 77 123 4567",
 };
 
@@ -67,14 +67,19 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined" && settings.site_title) {
       document.title = settings.site_title;
     }
-    if (typeof window !== "undefined" && settings.site_favicon_url) {
-      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
-      if (!link) {
-        link = document.createElement("link");
+    if (typeof window !== "undefined") {
+      const faviconUrl = settings.site_favicon_url || "/assets/logo-icon.png";
+      const iconLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
+      if (iconLinks.length > 0) {
+        iconLinks.forEach((l) => {
+          l.href = faviconUrl;
+        });
+      } else {
+        const link = document.createElement("link");
         link.rel = "shortcut icon";
+        link.href = faviconUrl;
         document.getElementsByTagName("head")[0].appendChild(link);
       }
-      link.href = settings.site_favicon_url;
     }
   }, [settings.site_title, settings.site_favicon_url]);
 

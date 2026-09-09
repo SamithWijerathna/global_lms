@@ -54,9 +54,17 @@ export default function SaaSAdminPage() {
   // New Tenant Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [checkingDns, setCheckingDns] = useState(false);
+  const [dnsStatus, setDnsStatus] = useState<{
+    checked: boolean;
+    verified: boolean;
+    message: string;
+    target: string;
+    domain: string;
+  } | null>(null);
+
   const [formData, setFormData] = useState({
     name: "",
-    slug: "",
     email: "",
     password: "",
     phone: "",
@@ -111,9 +119,62 @@ export default function SaaSAdminPage() {
     }
   };
 
-  const handleCreateTenant = async () => {
-    if (!formData.name || !formData.slug || !formData.email) {
-      alert("Name, Subdomain Slug, and Admin Email are required.");
+  const handleCheckCname = async () => {
+    if (!formData.customDomain.trim()) {
+      alert("Please enter a Custom Domain first (e.g. lms.myacademy.com).");
+      return;
+    }
+
+    setCheckingDns(true);
+    const apiUrl = getBackendApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/saas-admin/check-cname`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ domain: formData.customDomain }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDnsStatus({
+          checked: true,
+          verified: !!data.data.verified,
+          message: data.data.message || "",
+          target: data.data.cnameTarget || "cname.lms.circleone.asia",
+          domain: data.data.domain || formData.customDomain,
+        });
+      } else {
+        setDnsStatus({
+          checked: true,
+          verified: false,
+          message: data.error?.message || "Failed to verify CNAME.",
+          target: "cname.lms.circleone.asia",
+          domain: formData.customDomain,
+        });
+      }
+    } catch (err: any) {
+      setDnsStatus({
+        checked: true,
+        verified: false,
+        message: err.message || "Network error while checking DNS.",
+        target: "cname.lms.circleone.asia",
+        domain: formData.customDomain,
+      });
+    } finally {
+      setCheckingDns(false);
+    }
+  };
+
+  const handleCreateTenant = async (force: boolean = false) => {
+    if (!formData.name || !formData.email || !formData.customDomain) {
+      alert("Institute Name, Custom Domain, and Admin Email are required.");
+      return;
+    }
+
+    if (!force && (!dnsStatus || !dnsStatus.verified)) {
+      await handleCheckCname();
       return;
     }
 
@@ -142,15 +203,30 @@ export default function SaaSAdminPage() {
     }
   };
 
+  const resetModal = () => {
+    setCreatedResult(null);
+    setDnsStatus(null);
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      phone: "",
+      plan: "Standard",
+      monthlyPrice: "LKR 5,000",
+      customDomain: "",
+      initialInvoiceAmount: "5000",
+    });
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <Card className="w-full max-w-md p-6 shadow-xl border border-default-200">
           <CardHeader className="flex flex-col gap-1 items-center pb-6">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold mb-2">
-              🌐
+              <img src="/assets/logo-icon.png" alt="Volit" className="w-8 h-8 object-contain" />
             </div>
-            <h1 className="text-2xl font-bold text-center">Global LMS SaaS Admin</h1>
+            <h1 className="text-2xl font-bold text-center">Volit SaaS Admin</h1>
             <p className="text-sm text-default-500 text-center">
               Central Multi-Tenant & Domain Provisioning Control
             </p>
@@ -196,13 +272,13 @@ export default function SaaSAdminPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tenant Institutes & Domains</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Tenant Institutes & Custom Domains</h1>
           <p className="text-sm text-default-500 mt-1">
-            Provision isolated tenant databases and verify BYOD custom domains & CNAME records.
+            Provision isolated tenant databases and verify custom CNAME pointed domains.
           </p>
         </div>
         <div className="flex gap-3">
-          <Button color="primary" onPress={() => { setCreatedResult(null); setModalOpen(true); }}>
+          <Button color="primary" onPress={() => { resetModal(); setModalOpen(true); }}>
             + Provision New Institute
           </Button>
           <Button variant="flat" color="danger" onPress={() => setIsLoggedIn(false)}>
@@ -218,11 +294,11 @@ export default function SaaSAdminPage() {
           <h3 className="text-3xl font-bold mt-1 text-primary">{tenants.length}</h3>
         </Card>
         <Card className="p-4 border border-default-200">
-          <p className="text-sm text-default-500">Global LMS Root Domain</p>
+          <p className="text-sm text-default-500">Volit Root Cluster</p>
           <h3 className="text-xl font-bold mt-2 font-mono">lms.circleone.asia</h3>
         </Card>
         <Card className="p-4 border border-default-200">
-          <p className="text-sm text-default-500">Default CNAME Ingestion Target</p>
+          <p className="text-sm text-default-500">CNAME Ingestion Target</p>
           <h3 className="text-xl font-bold mt-2 font-mono text-success">cname.lms.circleone.asia</h3>
         </Card>
       </div>
@@ -230,7 +306,7 @@ export default function SaaSAdminPage() {
       {/* Tenant Table */}
       <Card className="border border-default-200">
         <CardHeader className="flex justify-between items-center px-6 py-4">
-          <h2 className="text-xl font-semibold">Registered LMS Academies</h2>
+          <h2 className="text-xl font-semibold">Registered Volit Academies</h2>
           <Button size="sm" variant="light" onPress={() => fetchTenants(token)} isLoading={loadingTenants}>
             🔄 Refresh
           </Button>
@@ -239,7 +315,7 @@ export default function SaaSAdminPage() {
           <Table aria-label="Tenant Institutes Table">
             <TableHeader>
               <TableColumn>INSTITUTE NAME</TableColumn>
-              <TableColumn>SUBDOMAIN SLUG</TableColumn>
+              <TableColumn>CUSTOM DOMAIN</TableColumn>
               <TableColumn>DATABASE NAME</TableColumn>
               <TableColumn>ADMIN EMAIL</TableColumn>
               <TableColumn>PLAN / PRICE</TableColumn>
@@ -251,12 +327,12 @@ export default function SaaSAdminPage() {
                 <TableRow key={t.id}>
                   <TableCell className="font-semibold">{t.name}</TableCell>
                   <TableCell>
-                    <code className="text-xs bg-default-100 px-2 py-1 rounded text-primary">
-                      {t.slug}.lms.circleone.asia
+                    <code className="text-xs bg-default-100 px-2 py-1 rounded text-primary font-mono">
+                      {t.primaryDomain || `${t.slug}.lms.circleone.asia`}
                     </code>
                   </TableCell>
                   <TableCell>
-                    <code className="text-xs text-default-600">{t.dbName}</code>
+                    <code className="text-xs text-default-600 font-mono">{t.dbName}</code>
                   </TableCell>
                   <TableCell>{t.email}</TableCell>
                   <TableCell>
@@ -267,7 +343,7 @@ export default function SaaSAdminPage() {
                   </TableCell>
                   <TableCell>
                     <Chip size="sm" color="success" variant="flat">
-                      Active Subdomain
+                      Active CNAME
                     </Chip>
                   </TableCell>
                   <TableCell className="text-xs text-default-500">
@@ -294,15 +370,15 @@ export default function SaaSAdminPage() {
                 {createdResult ? (
                   <div className="space-y-4 p-4 rounded-xl bg-success/10 border border-success/20">
                     <p className="font-semibold text-success text-base">
-                      🎉 Database, isolated schema, and domain records created!
+                      🎉 Isolated database schema and primary domain connected!
                     </p>
                     <div className="space-y-2 text-sm">
                       <p><strong>Institute:</strong> {createdResult.name}</p>
-                      <p><strong>Subdomain:</strong> <code className="bg-default-200 px-2 py-0.5 rounded">{createdResult.subdomain}</code></p>
-                      <p><strong>Database:</strong> <code className="bg-default-200 px-2 py-0.5 rounded">{createdResult.dbName}</code></p>
+                      <p><strong>Primary Domain:</strong> <code className="bg-default-200 px-2 py-0.5 rounded font-mono">{createdResult.primaryDomain}</code></p>
+                      <p><strong>Database:</strong> <code className="bg-default-200 px-2 py-0.5 rounded font-mono">{createdResult.dbName}</code></p>
                       <p><strong>Admin Email:</strong> {createdResult.adminEmail}</p>
                       <p><strong>Initial Password:</strong> <code className="bg-default-200 px-2 py-0.5 rounded font-bold">{createdResult.initialPassword}</code></p>
-                      <p><strong>License Key:</strong> <code className="bg-default-200 px-2 py-0.5 rounded">{createdResult.licenseKey}</code></p>
+                      <p><strong>License Key:</strong> <code className="bg-default-200 px-2 py-0.5 rounded font-mono">{createdResult.licenseKey}</code></p>
                     </div>
                   </div>
                 ) : (
@@ -312,21 +388,18 @@ export default function SaaSAdminPage() {
                         label="Institute / Business Name"
                         placeholder="e.g. Oxford Royal Academy"
                         value={formData.name}
-                        onValueChange={(v) => {
-                          setFormData({
-                            ...formData,
-                            name: v,
-                            slug: formData.slug || v.toLowerCase().replace(/[^a-z0-9]/g, ""),
-                          });
-                        }}
+                        onValueChange={(v) => setFormData({ ...formData, name: v })}
                         isRequired
                       />
                       <Input
-                        label="Subdomain Slug"
-                        placeholder="e.g. oxford"
-                        description="Creates <slug>.globallms.com"
-                        value={formData.slug}
-                        onValueChange={(v) => setFormData({ ...formData, slug: v })}
+                        label="Custom Domain (CNAME Pointed)"
+                        placeholder="e.g. lms.oxfordacademy.lk"
+                        description="Domain must have a CNAME pointing to cname.lms.circleone.asia"
+                        value={formData.customDomain}
+                        onValueChange={(v) => {
+                          setFormData({ ...formData, customDomain: v });
+                          setDnsStatus(null);
+                        }}
                         isRequired
                       />
                     </div>
@@ -350,13 +423,6 @@ export default function SaaSAdminPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Input
-                        label="Optional BYOD Custom Domain"
-                        placeholder="e.g. lms.oxfordacademy.lk"
-                        description="Can be verified via CNAME later"
-                        value={formData.customDomain}
-                        onValueChange={(v) => setFormData({ ...formData, customDomain: v })}
-                      />
                       <Select
                         label="Subscription Plan"
                         selectedKeys={[formData.plan]}
@@ -366,13 +432,78 @@ export default function SaaSAdminPage() {
                         <SelectItem key="Standard">Standard (LKR 10,000/mo)</SelectItem>
                         <SelectItem key="Enterprise">Enterprise (LKR 25,000/mo)</SelectItem>
                       </Select>
+                      <Input
+                        label="Initial Invoice Amount (LKR)"
+                        type="number"
+                        placeholder="5000"
+                        value={formData.initialInvoiceAmount}
+                        onValueChange={(v) => setFormData({ ...formData, initialInvoiceAmount: v })}
+                      />
                     </div>
+
+                    {/* CNAME Verification Guide & Check Section */}
+                    {formData.customDomain.trim() && (
+                      <div className="space-y-3 p-4 rounded-xl border border-default-200 bg-default-50">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-semibold text-sm flex items-center gap-2">
+                            <span>📡</span> CNAME Record Pre-check
+                          </h4>
+                          <Button
+                            size="sm"
+                            color={dnsStatus?.verified ? "success" : "primary"}
+                            variant={dnsStatus?.verified ? "flat" : "solid"}
+                            isLoading={checkingDns}
+                            onPress={handleCheckCname}
+                          >
+                            {dnsStatus ? "🔄 Re-Check CNAME Connection" : "Verify CNAME Record"}
+                          </Button>
+                        </div>
+
+                        {dnsStatus ? (
+                          <div className={`p-3 rounded-lg border text-xs space-y-2 ${
+                            dnsStatus.verified
+                              ? "bg-success/10 border-success/30 text-success"
+                              : "bg-warning/10 border-warning/30 text-warning"
+                          }`}>
+                            <div className="font-semibold flex items-center justify-between">
+                              <span>{dnsStatus.verified ? "✅ CNAME Connection Verified!" : "❌ CNAME Record Not Pointed Yet"}</span>
+                              <Chip size="sm" color={dnsStatus.verified ? "success" : "warning"} variant="flat">
+                                {dnsStatus.verified ? "Connected" : "Action Required"}
+                              </Chip>
+                            </div>
+                            <p>{dnsStatus.message}</p>
+
+                            {!dnsStatus.verified && (
+                              <div className="p-3 bg-background rounded border border-default-200 space-y-2 text-foreground mt-2">
+                                <p className="font-bold">📘 DNS Setup Guide for {formData.customDomain}:</p>
+                                <ol className="list-decimal list-inside space-y-1 text-default-600">
+                                  <li>Log into your DNS Provider (Cloudflare, GoDaddy, Namecheap, etc.).</li>
+                                  <li>Add a new <strong>CNAME</strong> record for your domain:</li>
+                                </ol>
+                                <div className="grid grid-cols-3 gap-2 font-mono text-[11px] bg-default-100 p-2 rounded">
+                                  <div><strong>Type:</strong> CNAME</div>
+                                  <div><strong>Host/Name:</strong> {formData.customDomain.split(".")[0] || "@"}</div>
+                                  <div><strong>Target:</strong> cname.lms.circleone.asia</div>
+                                </div>
+                                <p className="text-[11px] text-default-500">
+                                  After creating the CNAME record, click <strong>"Re-Check CNAME Connection"</strong> above.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-default-500">
+                            Check that <code>{formData.customDomain}</code> points to <code>cname.lms.circleone.asia</code> before provisioning.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </ModalBody>
               <ModalFooter>
                 {createdResult ? (
-                  <Button color="primary" onPress={() => { setCreatedResult(null); onClose(); }}>
+                  <Button color="primary" onPress={() => { resetModal(); onClose(); }}>
                     Close
                   </Button>
                 ) : (
@@ -380,9 +511,20 @@ export default function SaaSAdminPage() {
                     <Button variant="flat" onPress={onClose}>
                       Cancel
                     </Button>
-                    <Button color="primary" isLoading={creating} onPress={handleCreateTenant}>
-                      Provision Tenant DB & Domains
-                    </Button>
+                    {dnsStatus && !dnsStatus.verified ? (
+                      <div className="flex gap-2">
+                        <Button color="warning" variant="flat" isLoading={creating} onPress={() => handleCreateTenant(true)}>
+                          Provision Anyway (Bypass DNS)
+                        </Button>
+                        <Button color="primary" isLoading={checkingDns} onPress={handleCheckCname}>
+                          Re-Check CNAME Connection
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button color="primary" isLoading={creating} onPress={() => handleCreateTenant(false)}>
+                        Provision Tenant DB & Domain
+                      </Button>
+                    )}
                   </>
                 )}
               </ModalFooter>

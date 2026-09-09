@@ -1,8 +1,8 @@
-import type { IronSessionOptions } from "iron-session";
+import type { SessionOptions } from "iron-session";
 
-export const sessionOptions: IronSessionOptions = {
+export const sessionOptions: SessionOptions = {
   password: process.env.SESSION_PASSWORD || "complex_password_at_least_32_characters_long",
-  cookieName: "lashinigeo_session",
+  cookieName: "volit_session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
   },

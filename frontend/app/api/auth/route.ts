@@ -10,10 +10,10 @@ import jwt from "jsonwebtoken";
 import { getSystemSettingsServer } from "@/src/lib/getSystemSettings";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_1234567890abcdef");
-const getResendFrom = (name?: string) => process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM || `${name || "Lashinigeo"} <noreply@test.cloudwave.asia>`;
+const getResendFrom = (name?: string) => process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM || `${name || "Volit"} <noreply@test.cloudwave.asia>`;
 const getAppLogoUrl = (logoPath?: string) => {
   if (logoPath && logoPath.startsWith("http")) return logoPath;
-  const baseUrl = process.env.APP_URL || "https://lashinigeo.lk";
+  const baseUrl = process.env.APP_URL || "https://volit.lk";
   return `${baseUrl.replace(/\/$/, "")}${logoPath || "/assets/logo.png"}`;
 };
 

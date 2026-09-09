@@ -60,7 +60,7 @@ function BrandHeader() {
   const { settings } = useSystemSettings();
   const collapsed = state === "collapsed";
   const logoUrl = settings.site_logo_url || "/assets/logo.png";
-  const title = settings.site_title || "LASHINIGEO LMS";
+  const title = settings.site_title || "Volit LMS";
 
   return (
     <div className="flex items-center gap-2 px-2 py-1">
@@ -68,7 +68,7 @@ function BrandHeader() {
         <img
           src={logoUrl}
           alt={title}
-          className="size-7 shrink-0 object-contain filter dark:brightness-0 dark:invert"
+          className="size-7 shrink-0 object-contain"
           onError={(e: any) => {
             e.target.src = "/assets/logo.png";
           }}

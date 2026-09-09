@@ -5,12 +5,12 @@ import path from "path";
 
 export async function GET(req: Request) {
   const defaultSettings: Record<string, string> = {
-    site_title: "GLOBAL LMS",
-    site_short_name: "GLOBAL LMS",
+    site_title: "Volit LMS",
+    site_short_name: "Volit",
     site_logo_url: "/assets/logo.png",
-    site_favicon_url: "/favicon.ico",
-    copyright_text: "© 2026 Global LMS. All rights reserved.",
-    contact_email: "support@circleone.asia",
+    site_favicon_url: "/assets/logo-icon.png",
+    copyright_text: "© 2026 Volit. All rights reserved.",
+    contact_email: "support@volit.lk",
     contact_phone: "+94 77 123 4567",
   };
 

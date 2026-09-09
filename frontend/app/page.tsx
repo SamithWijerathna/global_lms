@@ -48,11 +48,11 @@ export default function LoadingScreen() {
       <div className="relative z-10 flex flex-col items-center">
         <img
           src={settings.site_logo_url || "/assets/logo.png"}
-          alt={settings.site_title || "LASHINIGEO LMS"}
+          alt={settings.site_title || "Volit LMS"}
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/assets/logo.png";
           }}
-          className="w-32 h-32 sm:w-36 sm:h-36 object-contain mb-4 filter dark:brightness-0 dark:invert transition-all drop-shadow-md"
+          className="w-32 h-32 sm:w-36 sm:h-36 object-contain mb-4 transition-all drop-shadow-md"
         />
         <Atom color="#868282" size="medium" text="" textColor="" />
       </div>

@@ -510,14 +510,14 @@ export default function Signup() {
     {(onClose) => (
       <>
         <ModalHeader className="flex flex-col gap-1">
-          Terms of Service – lashinigeo.lk
+          Terms of Service – volit.lk
         </ModalHeader>
         <ModalBody className="text-sm space-y-4">
 
           <p><strong>Effective Date:</strong> 2026/3/1</p>
 
           <p>
-            By creating an account or using lashinigeo.lk, you agree to the following terms.
+            By creating an account or using volit.lk, you agree to the following terms.
           </p>
 
           <div>
@@ -550,7 +550,7 @@ export default function Signup() {
           <div>
             <h4 className="font-semibold">4. Verification</h4>
             <p>
-              Email OTP verification is required. lashinigeo.lk reserves the right
+              Email OTP verification is required. volit.lk reserves the right
               to reject or suspend accounts that fail verification.
             </p>
           </div>
@@ -558,7 +558,7 @@ export default function Signup() {
           <div>
             <h4 className="font-semibold">5. Intellectual Property</h4>
             <p>
-              All platform content and branding belong to lashinigeo.lk and may not
+              All platform content and branding belong to volit.lk and may not
               be copied or redistributed without permission.
             </p>
           </div>
@@ -604,14 +604,14 @@ export default function Signup() {
     {(onClose) => (
       <>
         <ModalHeader className="flex flex-col gap-1">
-          Privacy Policy – lashinigeo.lk
+          Privacy Policy – volit.lk
         </ModalHeader>
         <ModalBody className="text-sm space-y-4">
 
           <p><strong>Effective Date:</strong> 2026/3/1</p>
 
           <p>
-            lashinigeo.lk values your privacy. This policy explains how we collect,
+            volit.lk values your privacy. This policy explains how we collect,
             use, and protect your information.
           </p>
 

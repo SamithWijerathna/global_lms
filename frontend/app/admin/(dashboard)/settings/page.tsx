@@ -104,10 +104,10 @@ function SettingsContent() {
   useEffect(() => {
     if (settings) {
       setBrandingForm({
-        site_title: settings.site_title || "LASHINIGEO LMS",
-        site_short_name: settings.site_short_name || "LASHINIGEO",
-        copyright_text: settings.copyright_text || "© 2026 Lashinigeo LMS. All rights reserved.",
-        contact_email: settings.contact_email || "support@lashinigeo.lk",
+        site_title: settings.site_title || "Volit LMS",
+        site_short_name: settings.site_short_name || "Volit",
+        copyright_text: settings.copyright_text || "© 2026 Volit. All rights reserved.",
+        contact_email: settings.contact_email || "support@volit.lk",
         contact_phone: settings.contact_phone || "+94 77 123 4567",
       });
     }
@@ -809,7 +809,7 @@ function SettingsContent() {
                     <div>
                       <Input
                         label="Full Site Title / System Name *"
-                        placeholder="e.g. LASHINIGEO LMS"
+                        placeholder="e.g. Volit LMS"
                         value={brandingForm.site_title}
                         onValueChange={(v) => setBrandingForm({ ...brandingForm, site_title: v })}
                         isRequired
@@ -819,7 +819,7 @@ function SettingsContent() {
                     <div>
                       <Input
                         label="Short Brand Name *"
-                        placeholder="e.g. LASHINIGEO"
+                        placeholder="e.g. Volit"
                         value={brandingForm.site_short_name}
                         onValueChange={(v) => setBrandingForm({ ...brandingForm, site_short_name: v })}
                         isRequired

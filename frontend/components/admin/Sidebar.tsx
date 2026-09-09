@@ -61,7 +61,7 @@ import { useSystemSettings } from "@/src/lib/useSystemSettings";
 export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobileOpen?: (open: boolean) => void }) {
   const { settings } = useSystemSettings();
   const logoUrl = settings.site_logo_url || "/assets/logo.png";
-  const title = settings.site_title || "LASHINIGEO LMS";
+  const title = settings.site_title || "Volit LMS";
 
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(() => {
@@ -147,7 +147,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
           }`}
         >
           <div className="flex items-center gap-2.5 overflow-hidden w-full">
-            <img src={logoUrl} alt={title} className="w-8 h-8 flex-shrink-0 object-contain filter dark:brightness-0 dark:invert transition-all" onError={(e: any) => { e.target.src = "/assets/logo.png"; }} />
+            <img src={logoUrl} alt={title} className="w-8 h-8 flex-shrink-0 object-contain transition-all" onError={(e: any) => { e.target.src = "/assets/logo.png"; }} />
             <span
               className={`text-base font-semibold text-gray-900 dark:text-white whitespace-nowrap tracking-tight flex-1 ${
                 !showMobile && collapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto"
