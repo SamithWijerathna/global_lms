@@ -288,15 +288,8 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
          ON DUPLICATE KEY UPDATE user_password = VALUES(user_password)`,
         [adminUuid, name.trim(), email.trim().toLowerCase(), hashedPassword]
       );
-
-      // Compatibility: also seed users table for student portal
-      await dbQuery(
-        `INSERT INTO users (uuid, student_id, first_name, last_name, user_email, phone, user_password, profile_completed)
-         VALUES (?, 'ADM0001', 'Admin', ?, ?, ?, ?, 1)
-         ON DUPLICATE KEY UPDATE user_password = VALUES(user_password)`,
-        [adminUuid, name.trim(), email.trim().toLowerCase(), phone || "0770000000", hashedPassword]
-      );
     });
+
 
     // 4. Register Primary Domain in TenantDomain
     const domainId = crypto.randomUUID();

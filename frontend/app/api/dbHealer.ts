@@ -195,20 +195,8 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
       }
     }
 
-    // Seed initial bank accounts if table is empty
-    if (await tableExists(pool, "bank_accounts")) {
-      const [bankRows] = await pool.query<any[]>("SELECT COUNT(*) as count FROM bank_accounts");
-      if (bankRows && bankRows[0]?.count === 0) {
-        await pool.query(`
-          INSERT INTO bank_accounts (uuid, bank_name, account_name, account_number, branch_name, is_active, display_order) VALUES
-          ('ba-comm-01', 'Commercial Bank', 'R A S T Rajapaksha', '802 092 806 9', 'Pilimathalawa', 1, 1),
-          ('ba-hnb-02', 'Hatton National Bank', 'R A S T Rajapaksha', '141020146041', 'Pilimathalawa', 1, 2)
-        `);
-        logs.push("Seeded initial bank accounts into table 'bank_accounts'");
-      }
-    }
-
     // Seed initial system settings if empty
+
     if (await tableExists(pool, "system_settings")) {
       const [settingRows] = await pool.query<any[]>("SELECT COUNT(*) as count FROM system_settings WHERE setting_key = 'monthly_target'");
       if (settingRows && settingRows[0]?.count === 0) {
