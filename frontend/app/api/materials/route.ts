@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDBConnection, authorize } from "../db"; 
+import { getDBConnection, authorize, getTenantMeta } from "../db"; 
 import { resolveMediaUrl } from "@/lib/r2StorageManager";
 import fs from "fs";
 import path from "path";
@@ -13,7 +13,8 @@ if (!fs.existsSync(CHUNK_DIR)) fs.mkdirSync(CHUNK_DIR, { recursive: true });
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 export async function POST(req: Request) {
-  const db = await getDBConnection();
+  const meta = await getTenantMeta(req);
+  const db = await getDBConnection(meta.dbName);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
