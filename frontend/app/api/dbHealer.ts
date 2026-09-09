@@ -264,13 +264,13 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
         sql: `CREATE TABLE IF NOT EXISTS class_material_list (
           id INT NOT NULL AUTO_INCREMENT,
           material_id VARCHAR(50) DEFAULT NULL,
-          material_description VARCHAR(150) DEFAULT NULL,
-          material_imageurl VARCHAR(150) DEFAULT NULL,
-          material_title VARCHAR(150) DEFAULT NULL,
-          material_type VARCHAR(150) DEFAULT NULL,
-          material_video_url VARCHAR(150) DEFAULT NULL,
-          material_pdf_url VARCHAR(150) DEFAULT NULL,
-          material_link VARCHAR(150) DEFAULT NULL,
+          material_description TEXT DEFAULT NULL,
+          material_imageurl TEXT DEFAULT NULL,
+          material_title VARCHAR(255) DEFAULT NULL,
+          material_type VARCHAR(50) DEFAULT NULL,
+          material_video_url TEXT DEFAULT NULL,
+          material_pdf_url TEXT DEFAULT NULL,
+          material_link TEXT DEFAULT NULL,
           class_id VARCHAR(50) DEFAULT NULL,
           create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           downloadable VARCHAR(50) DEFAULT NULL,
@@ -377,13 +377,13 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
         sql: `CREATE TABLE IF NOT EXISTS studypack_material_list (
           id INT NOT NULL AUTO_INCREMENT,
           material_id VARCHAR(50) DEFAULT NULL,
-          material_description VARCHAR(150) DEFAULT NULL,
-          material_title VARCHAR(150) DEFAULT NULL,
-          material_imageurl VARCHAR(150) DEFAULT NULL,
+          material_description TEXT DEFAULT NULL,
+          material_title VARCHAR(255) DEFAULT NULL,
+          material_imageurl TEXT DEFAULT NULL,
           material_type VARCHAR(50) DEFAULT NULL,
-          material_video_url VARCHAR(150) DEFAULT NULL,
-          material_pdf_url VARCHAR(150) DEFAULT NULL,
-          material_link VARCHAR(150) DEFAULT NULL,
+          material_video_url TEXT DEFAULT NULL,
+          material_pdf_url TEXT DEFAULT NULL,
+          material_link TEXT DEFAULT NULL,
           studypack_id VARCHAR(50) DEFAULT NULL,
           display_order INT DEFAULT 0,
           create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -552,24 +552,34 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
       }
     }
 
-    // 3. Modify description column types to TEXT to support long Sinhala / detailed descriptions
-    const alterTables = ["class_list", "class_material_list", "studypack_list", "studypack_material_list"];
-    const colMap: Record<string, string> = {
-      class_list: "class_description",
-      class_material_list: "material_description",
-      studypack_list: "studypack_description",
-      studypack_material_list: "material_description"
-    };
+    // 3. Modify description and URL column types to TEXT to support long R2 URLs and rich descriptions
+    const textColumnsToEnsure = [
+      { table: "class_list", column: "class_description" },
+      { table: "studypack_list", column: "studypack_description" },
+      { table: "class_material_list", column: "material_description" },
+      { table: "class_material_list", column: "material_video_url" },
+      { table: "class_material_list", column: "material_pdf_url" },
+      { table: "class_material_list", column: "material_imageurl" },
+      { table: "class_material_list", column: "material_link" },
+      { table: "studypack_material_list", column: "material_description" },
+      { table: "studypack_material_list", column: "material_video_url" },
+      { table: "studypack_material_list", column: "material_pdf_url" },
+      { table: "studypack_material_list", column: "material_imageurl" },
+      { table: "studypack_material_list", column: "material_link" },
+      { table: "materials", column: "material_description" },
+      { table: "materials", column: "material_video_url" },
+      { table: "materials", column: "material_pdf_url" },
+      { table: "materials", column: "material_imageurl" }
+    ];
 
-    for (const tbl of alterTables) {
-      if (await tableExists(pool, tbl)) {
-        const col = colMap[tbl];
-        if (await columnExists(pool, tbl, col)) {
+    for (const item of textColumnsToEnsure) {
+      if (await tableExists(pool, item.table)) {
+        if (await columnExists(pool, item.table, item.column)) {
           try {
-            await pool.query(`ALTER TABLE \`${tbl}\` MODIFY COLUMN \`${col}\` TEXT DEFAULT NULL`);
-            logs.push(`Updated column type of '${tbl}.${col}' to TEXT`);
+            await pool.query(`ALTER TABLE \`${item.table}\` MODIFY COLUMN \`${item.column}\` TEXT DEFAULT NULL`);
+            logs.push(`Updated column type of '${item.table}.${item.column}' to TEXT`);
           } catch (e: any) {
-            console.error(`[DB HEALER] Failed modifying ${tbl}.${col} type:`, e.message);
+            console.error(`[DB HEALER] Failed modifying ${item.table}.${item.column} type:`, e.message);
           }
         }
       }

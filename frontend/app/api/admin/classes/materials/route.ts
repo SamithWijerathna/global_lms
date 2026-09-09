@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDBConnection, authorize, getTenantMeta } from "../../../db";
+import { healDatabase } from "../../../dbHealer";
 import { uploadTenantMediaToR2 } from "@/lib/r2StorageManager";
 import { promises as fs } from "fs";
 import path from "path";
 
 const uploadDir = path.join(process.cwd(), "public", "uploads", "materials");
 const tempDir = path.join(process.cwd(), "public", "uploads", "temp");
+const TEMP_FILE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 
 async function ensureDirs() {
   await fs.mkdir(uploadDir, { recursive: true });
@@ -40,7 +42,7 @@ async function cleanupOldTempFiles() {
 }
 
 /**
- * Validate chunk data
+ * Validate chunk upload data
  */
 function validateChunkData(formData: FormData) {
   const chunk = formData.get("chunk") as File | null;
@@ -57,29 +59,34 @@ function validateChunkData(formData: FormData) {
     return { error: "Invalid chunk index", status: 400 };
   }
 
-  if (!tempUploadId || tempUploadId.length < 10) {
-    return { error: "Invalid upload ID", status: 400 };
+  if (!tempUploadId || !tempUploadId.trim()) {
+    return { error: "Missing temp upload ID", status: 400 };
   }
 
   if (!fileType || !["video", "pdf", "image"].includes(fileType)) {
     return { error: "Invalid file type", status: 400 };
   }
 
-  if (!originalName) {
-    return { error: "Missing original filename", status: 400 };
+  if (!originalName || !originalName.trim()) {
+    return { error: "Missing original file name", status: 400 };
   }
 
   return {
     chunk,
     chunkIndex: parseInt(chunkIndex),
-    tempUploadId,
+    tempUploadId: tempUploadId.trim(),
     fileType: fileType as "video" | "pdf" | "image",
-    originalName,
+    originalName: originalName.trim(),
   };
 }
 
 export async function GET(req: Request) {
-  const db = await getDBConnection();
+  const meta = await getTenantMeta(req);
+  const db = await getDBConnection(meta.dbName);
+  await healDatabase(db).catch((err) => {
+    console.warn("Database healing warning in materials GET:", err.message);
+  });
+
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -132,7 +139,12 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const db = await getDBConnection();
+  const meta = await getTenantMeta(req);
+  const db = await getDBConnection(meta.dbName);
+  await healDatabase(db).catch((err) => {
+    console.warn("Database healing warning in materials POST:", err.message);
+  });
+
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -453,7 +465,8 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const db = await getDBConnection();
+  const meta = await getTenantMeta(req);
+  const db = await getDBConnection(meta.dbName);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });

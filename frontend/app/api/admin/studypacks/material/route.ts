@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDBConnection, authorize } from "../../../db";
+import { getDBConnection, authorize, getTenantMeta } from "../../../db";
+import { healDatabase } from "../../../dbHealer";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -10,7 +11,12 @@ async function ensureUploadDir() {
 }
 
 export async function GET(req: Request) {
-  const db = await getDBConnection();
+  const meta = await getTenantMeta(req);
+  const db = await getDBConnection(meta.dbName);
+  await healDatabase(db).catch((err) => {
+    console.warn("Database healing warning in studypack materials GET:", err.message);
+  });
+
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -53,7 +59,12 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const db = await getDBConnection();
+  const meta = await getTenantMeta(req);
+  const db = await getDBConnection(meta.dbName);
+  await healDatabase(db).catch((err) => {
+    console.warn("Database healing warning in studypack materials POST:", err.message);
+  });
+
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -198,7 +209,8 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const db = await getDBConnection();
+  const meta = await getTenantMeta(req);
+  const db = await getDBConnection(meta.dbName);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
