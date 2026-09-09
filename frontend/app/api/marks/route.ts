@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDBConnection, authorize } from "../db";
 
 export async function GET(req: Request) {
-  const db = await getDBConnection();
+  const db = await getDBConnection(req);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -13,7 +13,6 @@ export async function GET(req: Request) {
     const student_uuid = searchParams.get("student_uuid");
     const mark_id = searchParams.get("mark_id");
     const withAverage = searchParams.get("withAverage") === "true";
-    const db = await getDBConnection();
 
     if (mark_id) {
       const [rows] = await db.query(
@@ -147,7 +146,7 @@ export async function GET(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const db = await getDBConnection();
+  const db = await getDBConnection(req);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -204,7 +203,7 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const db = await getDBConnection();
+  const db = await getDBConnection(req);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -214,7 +213,6 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
-    const db = await getDBConnection();
     await db.query("DELETE FROM students_marks WHERE id = ?", [id]);
     return NextResponse.json({ success: true });
   } catch (error) {

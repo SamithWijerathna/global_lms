@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDBConnection } from "../db";
 
-export async function GET() {
-  const db = await getDBConnection();
+export async function GET(req: Request) {
+  const db = await getDBConnection(req);
   const [rows] = await db.query(
     "SELECT id, paper_id, paper_name FROM paper_predefine ORDER BY id DESC"
   );
@@ -11,7 +11,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const db = await getDBConnection();
+    const db = await getDBConnection(req);
     const formData = await req.formData();
     const action = formData.get("action") as string;
 
@@ -72,7 +72,7 @@ export async function DELETE(req: Request) {
 
     if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
 
-    const db = await getDBConnection();
+    const db = await getDBConnection(req);
     await db.query("DELETE FROM paper_predefine WHERE id = ?", [id]);
 
     return NextResponse.json({ success: true });

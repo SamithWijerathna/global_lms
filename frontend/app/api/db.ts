@@ -139,7 +139,11 @@ async function resolveTenantDbName(domain?: string, slug?: string): Promise<stri
 export async function getDBConnection(contextOrReq?: Request | Headers | string): Promise<mysql.Pool> {
   // Direct DB name string override
   if (typeof contextOrReq === "string") {
-    if (contextOrReq.startsWith("lms_tenant_") || contextOrReq === defaultDb) {
+    if (
+      contextOrReq.startsWith("lms_tenant_") ||
+      contextOrReq === defaultDb ||
+      (!contextOrReq.includes(".") && !contextOrReq.includes(":") && /^[a-zA-Z0-9_]+$/.test(contextOrReq))
+    ) {
       return getPoolForDatabase(contextOrReq);
     }
   }

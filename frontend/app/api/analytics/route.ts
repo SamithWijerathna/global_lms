@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
-import { getDBConnection, authorize } from "../db";
+import { getDBConnection, authorize, getTenantMeta } from "../db";
+import { healDatabase } from "../dbHealer";
 
 export async function GET(req: Request) {
   try {
-    const db = await getDBConnection();
+    const meta = await getTenantMeta(req);
+    const db = await getDBConnection(meta.dbName);
+
+    // Ensure tenant database has all required tables and schema
+    await healDatabase(db).catch((err) => {
+      console.warn("Database healing warning in analytics:", err.message);
+    });
+
     const authError = await authorize(req, db);
     if (authError) {
       return NextResponse.json({ error: authError.error }, { status: authError.status });

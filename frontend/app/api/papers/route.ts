@@ -6,7 +6,7 @@ import path from "path";
 const uploadDir = path.join(process.cwd(), "public", "uploads", "papers");
 
 export async function GET(req: Request) {
-  const db = await getDBConnection();
+  const db = await getDBConnection(req);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const db = await getDBConnection();
+  const db = await getDBConnection(req);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });
@@ -128,7 +128,7 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const db = await getDBConnection();
+  const db = await getDBConnection(req);
   const authError = await authorize(req, db);
   if (authError) {
     return NextResponse.json({ error: authError.error }, { status: authError.status });

@@ -1,7 +1,7 @@
 import mysql from "mysql2/promise";
 
-let isHealingFinished = false;
-let isHealingInProgress = false;
+const healedDatabases = new Set<string>();
+const activeHealingPromises = new Map<string, Promise<{ success: boolean; logs: string[] }>>();
 
 async function tableExists(pool: mysql.Pool, table: string): Promise<boolean> {
   try {
@@ -28,15 +28,28 @@ async function columnExists(pool: mysql.Pool, table: string, column: string): Pr
 }
 
 export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ success: boolean; logs: string[] }> {
-  if (isHealingInProgress) {
-    return { success: true, logs: ["Database healing currently in progress..."] };
+  let dbName = "default";
+  try {
+    const [rows] = await pool.query<any[]>("SELECT DATABASE() as db");
+    if (Array.isArray(rows) && rows[0]?.db) {
+      dbName = rows[0].db;
+    }
+  } catch (e) {
+    // ignore query failure if pool cannot yet query
   }
 
-  isHealingInProgress = true;
-  const logs: string[] = [];
+  if (!force && healedDatabases.has(dbName)) {
+    return { success: true, logs: [`Database '${dbName}' already verified and healed.`] };
+  }
 
-  try {
-    logs.push("Starting database schema healing...");
+  if (activeHealingPromises.has(dbName)) {
+    return await activeHealingPromises.get(dbName)!;
+  }
+
+  const healingPromise = (async () => {
+    const logs: string[] = [];
+    try {
+      logs.push(`Starting database schema healing for '${dbName}'...`);
 
     // 1. Check and create missing tables
     const tablesToEnsure = [
@@ -276,6 +289,151 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
           data LONGTEXT,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "paper_predefine",
+        sql: `CREATE TABLE IF NOT EXISTS paper_predefine (
+          id INT NOT NULL AUTO_INCREMENT,
+          paper_id VARCHAR(50) DEFAULT NULL,
+          paper_name VARCHAR(255) NOT NULL,
+          paper_cover_image VARCHAR(255) DEFAULT NULL,
+          create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "students_marks",
+        sql: `CREATE TABLE IF NOT EXISTS students_marks (
+          id INT NOT NULL AUTO_INCREMENT,
+          student_uuid VARCHAR(150) DEFAULT NULL,
+          paper_id VARCHAR(50) DEFAULT NULL,
+          mark_a DOUBLE DEFAULT NULL,
+          mark_b DOUBLE DEFAULT NULL,
+          update_at DATE DEFAULT NULL,
+          create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "quiz_list",
+        sql: `CREATE TABLE IF NOT EXISTS quiz_list (
+          id INT NOT NULL AUTO_INCREMENT,
+          quiz_id VARCHAR(20) NOT NULL,
+          title VARCHAR(200) NOT NULL,
+          description TEXT,
+          batch VARCHAR(20) NOT NULL,
+          expire_date DATETIME DEFAULT NULL,
+          created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY quiz_id (quiz_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "quiz_questions",
+        sql: `CREATE TABLE IF NOT EXISTS quiz_questions (
+          id INT NOT NULL AUTO_INCREMENT,
+          quiz_id VARCHAR(20) NOT NULL,
+          question_text TEXT NOT NULL,
+          options JSON NOT NULL,
+          correct_answer INT NOT NULL,
+          created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY quiz_id (quiz_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "student_quiz_attempts",
+        sql: `CREATE TABLE IF NOT EXISTS student_quiz_attempts (
+          id INT NOT NULL AUTO_INCREMENT,
+          student_uuid VARCHAR(150) NOT NULL,
+          quiz_id VARCHAR(20) NOT NULL,
+          answers JSON NOT NULL,
+          score DECIMAL(5,2) NOT NULL,
+          attempted_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY unique_attempt (student_uuid, quiz_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "studypack_list",
+        sql: `CREATE TABLE IF NOT EXISTS studypack_list (
+          id INT NOT NULL AUTO_INCREMENT,
+          studypack_id VARCHAR(50) DEFAULT NULL,
+          studypack_description VARCHAR(150) DEFAULT NULL,
+          studypack_imageurl VARCHAR(150) DEFAULT NULL,
+          studypack_title VARCHAR(150) DEFAULT NULL,
+          studypack_type VARCHAR(50) DEFAULT NULL,
+          studypack_code VARCHAR(50) DEFAULT NULL,
+          batch VARCHAR(50) DEFAULT NULL,
+          price INT DEFAULT NULL,
+          display_order INT DEFAULT 0,
+          create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "studypack_material_list",
+        sql: `CREATE TABLE IF NOT EXISTS studypack_material_list (
+          id INT NOT NULL AUTO_INCREMENT,
+          material_id VARCHAR(50) DEFAULT NULL,
+          material_description VARCHAR(150) DEFAULT NULL,
+          material_title VARCHAR(150) DEFAULT NULL,
+          material_imageurl VARCHAR(150) DEFAULT NULL,
+          material_type VARCHAR(50) DEFAULT NULL,
+          material_video_url VARCHAR(150) DEFAULT NULL,
+          material_pdf_url VARCHAR(150) DEFAULT NULL,
+          material_link VARCHAR(150) DEFAULT NULL,
+          studypack_id VARCHAR(50) DEFAULT NULL,
+          display_order INT DEFAULT 0,
+          create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "user_last_login",
+        sql: `CREATE TABLE IF NOT EXISTS user_last_login (
+          id INT NOT NULL AUTO_INCREMENT,
+          user_uuid VARCHAR(100) NOT NULL,
+          device_name VARCHAR(255) DEFAULT NULL,
+          ip_address VARCHAR(100) DEFAULT NULL,
+          last_login DATETIME DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY user_uuid (user_uuid)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "video_views",
+        sql: `CREATE TABLE IF NOT EXISTS video_views (
+          id BIGINT NOT NULL AUTO_INCREMENT,
+          user_uuid VARCHAR(36) NOT NULL,
+          material_id VARCHAR(255) NOT NULL,
+          view_count INT DEFAULT '0',
+          updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY uniq_user_material (user_uuid, material_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "email_otps",
+        sql: `CREATE TABLE IF NOT EXISTS email_otps (
+          email VARCHAR(255) NOT NULL,
+          otp VARCHAR(6) NOT NULL,
+          expires_at DATETIME NOT NULL,
+          PRIMARY KEY (email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "password_resets",
+        sql: `CREATE TABLE IF NOT EXISTS password_resets (
+          id BIGINT NOT NULL AUTO_INCREMENT,
+          email VARCHAR(255) NOT NULL,
+          token VARCHAR(6) NOT NULL,
+          expires_at DATETIME NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY email (email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
       }
     ];
 
@@ -332,6 +490,11 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
 
     // 2. Check and add missing columns to existing tables
     const columnsToEnsure = [
+      {
+        table: "paper_predefine",
+        column: "paper_id",
+        sql: `ALTER TABLE paper_predefine ADD COLUMN paper_id VARCHAR(50) DEFAULT NULL`
+      },
       {
         table: "paper_predefine",
         column: "paper_cover_image",
@@ -412,15 +575,19 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
       }
     }
 
-    isHealingFinished = true;
-    logs.push("Database schema healing completed successfully.");
-    console.log("[DB HEALER]", logs.join(" | "));
-    return { success: true, logs };
-  } catch (err: any) {
-    logs.push(`Database healing failed: ${err.message}`);
-    console.error("[DB HEALER ERROR]", err);
-    return { success: false, logs };
-  } finally {
-    isHealingInProgress = false;
-  }
+      healedDatabases.add(dbName);
+      logs.push("Database schema healing completed successfully.");
+      console.log("[DB HEALER]", logs.join(" | "));
+      return { success: true, logs };
+    } catch (err: any) {
+      logs.push(`Database healing failed: ${err.message}`);
+      console.error("[DB HEALER ERROR]", err);
+      return { success: false, logs };
+    } finally {
+      activeHealingPromises.delete(dbName);
+    }
+  })();
+
+  activeHealingPromises.set(dbName, healingPromise);
+  return await healingPromise;
 }

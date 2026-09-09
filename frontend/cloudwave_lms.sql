@@ -275,6 +275,7 @@ CREATE TABLE IF NOT EXISTS `studypack_material_list` (
 
 CREATE TABLE IF NOT EXISTS `paper_predefine` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `paper_id` varchar(50) DEFAULT NULL,
   `paper_name` varchar(255) NOT NULL,
   `paper_cover_image` varchar(255) DEFAULT NULL,
   `create_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
