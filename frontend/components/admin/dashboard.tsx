@@ -277,7 +277,7 @@ export default function DashboardHome() {
       ) : (
         <>
           <p className="text-2xl font-bold">{mediaUsedGB} GB / {mediaTotalGB} GB</p>
-          <p className="text-xs text-default-500 mt-1">Cloudflare R2: Course Videos, PDFs & Materials</p>
+          <p className="text-xs text-default-500 mt-1">Course Videos, PDFs & Materials</p>
           <p className="text-sm text-purple-600 font-medium mt-2">
             {currentRemaining}% space available ({storage?.media?.remainingGB ?? (mediaTotalGB - mediaUsedGB)} GB remaining)
           </p>
@@ -291,7 +291,7 @@ export default function DashboardHome() {
         <h3 className="text-xl font-bold">Storage Tiers</h3>
         <div className="p-3 bg-default-50 rounded-xl border border-default-200 text-left space-y-1">
           <div className="flex justify-between items-center text-sm font-semibold">
-            <span>📁 App Essentials (Local)</span>
+            <span>📁 App Essentials</span>
             <span className="text-primary font-bold">{localPercentage}%</span>
           </div>
           <p className="text-xs text-default-500">{localUsedMB} MB of {localTotalMB} MB used</p>
@@ -300,7 +300,7 @@ export default function DashboardHome() {
 
         <div className="p-3 bg-purple-50/30 rounded-xl border border-purple-200 text-left space-y-1">
           <div className="flex justify-between items-center text-sm font-semibold text-purple-700 dark:text-purple-300">
-            <span>☁️ Cloud Media (R2)</span>
+            <span>☁️ Media Storage</span>
             <span className="font-bold">{isEmbedOnly ? "Embeds" : `${mediaPercentage}%`}</span>
           </div>
           <p className="text-xs text-default-500">

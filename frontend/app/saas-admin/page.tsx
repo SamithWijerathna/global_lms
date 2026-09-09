@@ -604,7 +604,7 @@ export default function SaaSAdminPage() {
                         onValueChange={(v) => setFormData({ ...formData, maxStorageMb: v })}
                       />
                       <Select
-                        label="☁️ Cloud Media Quota (R2)"
+                        label="☁️ Cloud Media Quota"
                         description="For course videos, PDFs & materials"
                         selectedKeys={[formData.maxMediaStorageGb]}
                         onChange={(e) => setFormData({ ...formData, maxMediaStorageGb: e.target.value })}
@@ -769,10 +769,10 @@ export default function SaaSAdminPage() {
                 <div className="p-4 rounded-xl border border-default-200 bg-default-50 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold text-sm">📁 Local Storage Quota</h4>
+                      <h4 className="font-semibold text-sm">📁 App Essentials Quota</h4>
                       <p className="text-xs text-default-500">For student profiles, payment receipts, and cover images</p>
                     </div>
-                    <Chip color="primary" variant="flat" size="sm">VPS Local Disk</Chip>
+                    <Chip color="primary" variant="flat" size="sm">App Essentials</Chip>
                   </div>
                   <div className="flex gap-2">
                     {[500, 1000, 2000].map((mb) => (
@@ -788,21 +788,21 @@ export default function SaaSAdminPage() {
                     ))}
                   </div>
                   <Input
-                    label="Custom Local Quota (MB)"
+                    label="Custom App Essentials Quota (MB)"
                     type="number"
                     value={String(editLocalMb)}
                     onValueChange={(v) => setEditLocalMb(parseInt(v, 10) || 500)}
                   />
                 </div>
 
-                {/* Cloudflare R2 Media Tier */}
+                {/* Cloud Media Tier */}
                 <div className="p-4 rounded-xl border border-secondary-200 bg-secondary-50/20 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold text-sm">☁️ Cloud Media Quota</h4>
-                      <p className="text-xs text-default-500">For heavy course videos, PDFs, and study pack materials</p>
+                      <h4 className="font-semibold text-sm">☁️ Media Storage Quota</h4>
+                      <p className="text-xs text-default-500">For course videos, PDFs, and study pack materials</p>
                     </div>
-                    <Chip color="secondary" variant="flat" size="sm">Cloudflare R2</Chip>
+                    <Chip color="secondary" variant="flat" size="sm">Videos & Materials</Chip>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {[0, 10, 20, 50, 100].map((gb) => (
