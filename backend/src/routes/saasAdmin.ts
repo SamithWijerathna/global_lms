@@ -142,19 +142,26 @@ router.post("/check-cname", authMiddleware, requireSuperAdmin, async (req, res) 
       "SELECT id FROM TenantDomain WHERE LOWER(domain) = ? LIMIT 1",
       [cleanDomain]
     );
-    if (existing.length > 0) {
-      return sendError(res, 400, "DOMAIN_EXISTS", "This domain is already registered in Volit.");
-    }
+    const domainExists = existing.length > 0;
 
     const dnsResult = await checkCustomDomainDns(cleanDomain, DEFAULT_CNAME, "");
+    const verified = dnsResult.cnameMatched || dnsResult.verified;
+
+    let message = verified
+      ? `CNAME record is successfully pointed to ${DEFAULT_CNAME}`
+      : `CNAME record for '${cleanDomain}' is not pointing to '${DEFAULT_CNAME}'.`;
+
+    if (domainExists) {
+      message += " (Note: This domain is already registered to a tenant in Volit.)";
+    }
+
     return sendSuccess(res, {
       domain: cleanDomain,
       cnameTarget: DEFAULT_CNAME,
-      verified: dnsResult.cnameMatched || dnsResult.verified,
+      verified,
+      domainExists,
       currentCnames: dnsResult.currentCnames,
-      message: dnsResult.cnameMatched
-        ? `CNAME record is successfully pointed to ${DEFAULT_CNAME}`
-        : `CNAME record for '${cleanDomain}' is not pointing to '${DEFAULT_CNAME}'.`,
+      message,
     });
   } catch (err: any) {
     return sendError(res, 500, "DNS_CHECK_FAILED", err.message || "Failed to check domain DNS.");
@@ -327,6 +334,45 @@ router.get("/tenants/:id", authMiddleware, async (req, res) => {
     return sendSuccess(res, tenant);
   } catch (err: any) {
     return sendError(res, 500, "FETCH_TENANT_FAILED", err.message || "Failed to retrieve tenant details.");
+  }
+});
+
+// 5. Delete Tenant (Super Admin)
+router.delete("/tenants/:id", authMiddleware, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [rows] = await pool.execute<any[]>(
+      "SELECT id, name, dbName FROM SaaSTenant WHERE id = ? LIMIT 1",
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return sendError(res, 404, "TENANT_NOT_FOUND", "Tenant not found.");
+    }
+
+    const tenant = rows[0];
+
+    // 1. Delete associated records in central database
+    await pool.execute("DELETE FROM TenantRouting WHERE tenantId = ?", [id]);
+    await pool.execute("DELETE FROM TenantDomain WHERE tenantId = ?", [id]);
+    await pool.execute("DELETE FROM SaaSInvoice WHERE tenantId = ?", [id]);
+    await pool.execute("DELETE FROM SaaSTenant WHERE id = ?", [id]);
+
+    // 2. Drop tenant database schema (best-effort)
+    if (tenant.dbName) {
+      try {
+        await pool.execute(`DROP DATABASE IF EXISTS \`${tenant.dbName}\``);
+      } catch (dbErr: any) {
+        console.error(`Failed to drop database ${tenant.dbName}:`, dbErr.message);
+      }
+    }
+
+    clearRouteCache();
+
+    return sendSuccess(res, { id, name: tenant.name }, "Tenant deleted successfully.");
+  } catch (err: any) {
+    return sendError(res, 500, "DELETE_TENANT_FAILED", err.message || "Failed to delete tenant.");
   }
 });
 

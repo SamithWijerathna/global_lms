@@ -58,6 +58,7 @@ export default function SaaSAdminPage() {
   const [dnsStatus, setDnsStatus] = useState<{
     checked: boolean;
     verified: boolean;
+    domainExists?: boolean;
     message: string;
     target: string;
     domain: string;
@@ -74,6 +75,10 @@ export default function SaaSAdminPage() {
     initialInvoiceAmount: "5000",
   });
   const [createdResult, setCreatedResult] = useState<any>(null);
+
+  // Tenant Deletion State
+  const [deletingTenant, setDeletingTenant] = useState<TenantItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchTenants = async (authToken: string) => {
     setLoadingTenants(true);
@@ -141,6 +146,7 @@ export default function SaaSAdminPage() {
         setDnsStatus({
           checked: true,
           verified: !!data.data.verified,
+          domainExists: !!data.data.domainExists,
           message: data.data.message || "",
           target: data.data.cnameTarget || "cname.lms.circleone.asia",
           domain: data.data.domain || formData.customDomain,
@@ -149,6 +155,7 @@ export default function SaaSAdminPage() {
         setDnsStatus({
           checked: true,
           verified: false,
+          domainExists: data.error?.code === "DOMAIN_EXISTS",
           message: data.error?.message || "Failed to verify CNAME.",
           target: "cname.lms.circleone.asia",
           domain: formData.customDomain,
@@ -158,6 +165,7 @@ export default function SaaSAdminPage() {
       setDnsStatus({
         checked: true,
         verified: false,
+        domainExists: false,
         message: err.message || "Network error while checking DNS.",
         target: "cname.lms.circleone.asia",
         domain: formData.customDomain,
@@ -200,6 +208,29 @@ export default function SaaSAdminPage() {
       alert(err.message || "Network error while provisioning tenant.");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDeleteTenant = async () => {
+    if (!deletingTenant) return;
+    setDeleting(true);
+    const apiUrl = getBackendApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/saas-admin/tenants/${deletingTenant.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDeletingTenant(null);
+        fetchTenants(token);
+      } else {
+        alert(data.error?.message || "Failed to delete tenant.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Network error while deleting tenant.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -321,6 +352,7 @@ export default function SaaSAdminPage() {
               <TableColumn>PLAN / PRICE</TableColumn>
               <TableColumn>DOMAIN STATUS</TableColumn>
               <TableColumn>CREATED DATE</TableColumn>
+              <TableColumn align="center">ACTIONS</TableColumn>
             </TableHeader>
             <TableBody emptyContent={loadingTenants ? "Loading tenants..." : "No tenants found."}>
               {tenants.map((t) => (
@@ -348,6 +380,16 @@ export default function SaaSAdminPage() {
                   </TableCell>
                   <TableCell className="text-xs text-default-500">
                     {new Date(t.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Button
+                      size="sm"
+                      color="danger"
+                      variant="flat"
+                      onPress={() => setDeletingTenant(t)}
+                    >
+                      🗑️ Delete
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -467,9 +509,16 @@ export default function SaaSAdminPage() {
                           }`}>
                             <div className="font-semibold flex items-center justify-between">
                               <span>{dnsStatus.verified ? "✅ CNAME Connection Verified!" : "❌ CNAME Record Not Pointed Yet"}</span>
-                              <Chip size="sm" color={dnsStatus.verified ? "success" : "warning"} variant="flat">
-                                {dnsStatus.verified ? "Connected" : "Action Required"}
-                              </Chip>
+                              <div className="flex gap-1">
+                                {dnsStatus.domainExists && (
+                                  <Chip size="sm" color="danger" variant="flat">
+                                    Domain In Use
+                                  </Chip>
+                                )}
+                                <Chip size="sm" color={dnsStatus.verified ? "success" : "warning"} variant="flat">
+                                  {dnsStatus.verified ? "Connected" : "Action Required"}
+                                </Chip>
+                              </div>
                             </div>
                             <p>{dnsStatus.message}</p>
 
@@ -527,6 +576,40 @@ export default function SaaSAdminPage() {
                     )}
                   </>
                 )}
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={!!deletingTenant} onOpenChange={(open) => !open && setDeletingTenant(null)}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="text-danger font-bold">
+                ⚠️ Delete Tenant Institute
+              </ModalHeader>
+              <ModalBody>
+                <p className="text-sm">
+                  Are you sure you want to delete <strong>{deletingTenant?.name}</strong>?
+                </p>
+                <div className="p-3 bg-danger-50 text-danger border border-danger-200 rounded-lg text-xs space-y-1 mt-2">
+                  <p className="font-bold">This action is permanent and will remove:</p>
+                  <ul className="list-disc list-inside">
+                    <li>Tenant Database Schema: <code>{deletingTenant?.dbName}</code></li>
+                    <li>Domain routing records & custom domains</li>
+                    <li>SaaS subscription invoices</li>
+                  </ul>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="flat" onPress={onClose} isDisabled={deleting}>
+                  Cancel
+                </Button>
+                <Button color="danger" isLoading={deleting} onPress={handleDeleteTenant}>
+                  Confirm Delete
+                </Button>
               </ModalFooter>
             </>
           )}

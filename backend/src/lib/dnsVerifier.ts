@@ -1,4 +1,4 @@
-import dns from "dns/promises";
+import dns, { Resolver } from "dns/promises";
 
 export interface DomainDnsCheckResult {
   verified: boolean;
@@ -22,11 +22,41 @@ export async function checkCustomDomainDns(
   let cnameMatched = false;
   let txtMatched = false;
 
+  // Use public DNS resolvers first (Google & Cloudflare) to bypass local OS/ISP DNS lookup issues
+  const publicResolver = new Resolver();
+  publicResolver.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4", "1.0.0.1"]);
+
+  const resolveCname = async (host: string): Promise<string[]> => {
+    try {
+      return await publicResolver.resolveCname(host);
+    } catch (_) {
+      try {
+        return await dns.resolveCname(host);
+      } catch (_) {
+        return [];
+      }
+    }
+  };
+
+  const resolveTxt = async (host: string): Promise<string[][]> => {
+    try {
+      return await publicResolver.resolveTxt(host);
+    } catch (_) {
+      try {
+        return await dns.resolveTxt(host);
+      } catch (_) {
+        return [];
+      }
+    }
+  };
+
   // 1. Check CNAME record
   try {
-    const cnameRecords = await dns.resolveCname(cleanDomain);
+    const cnameRecords = await resolveCname(cleanDomain);
     currentCnames = cnameRecords.map((c) => c.toLowerCase().replace(/\.$/, ""));
-    cnameMatched = currentCnames.includes(cleanTarget);
+    cnameMatched = currentCnames.some(
+      (c) => c === cleanTarget || c.endsWith(`.${cleanTarget}`)
+    );
   } catch (err: any) {
     // No CNAME found or domain not resolved
   }
@@ -34,7 +64,7 @@ export async function checkCustomDomainDns(
   // 2. Check TXT record verification (e.g. volit-verification=<token>)
   const expectedTxtPrefix = `volit-verification=${expectedToken}`;
   try {
-    const txtRecords = await dns.resolveTxt(cleanDomain);
+    const txtRecords = await resolveTxt(cleanDomain);
     currentTxts = txtRecords.flat();
     txtMatched = currentTxts.some(
       (txt) => txt === expectedToken || txt === expectedTxtPrefix || txt.includes(expectedToken)
@@ -44,10 +74,10 @@ export async function checkCustomDomainDns(
   }
 
   // Fallback: check TXT record on subdomain _volit-challenge.<domain>
-  if (!txtMatched) {
+  if (!txtMatched && expectedToken) {
     try {
       const challengeDomain = `_volit-challenge.${cleanDomain}`;
-      const challengeTxts = (await dns.resolveTxt(challengeDomain)).flat();
+      const challengeTxts = (await resolveTxt(challengeDomain)).flat();
       currentTxts.push(...challengeTxts);
       txtMatched = challengeTxts.some(
         (txt) => txt === expectedToken || txt === expectedTxtPrefix || txt.includes(expectedToken)
