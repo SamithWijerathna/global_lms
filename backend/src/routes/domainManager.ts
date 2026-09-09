@@ -9,25 +9,19 @@ import { authMiddleware } from "../middleware/auth";
 const router = Router();
 const DEFAULT_CNAME = process.env.DEFAULT_CNAME_TARGET || "cname.globallms.com";
 const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL || "admin@circleone.asia";
+const SSL_SCRIPT = process.env.SSL_SCRIPT_PATH || "/var/www/global_lms/backend/scripts/add-tenant-ssl.sh";
 
 /**
- * Provisions a Let's Encrypt SSL certificate for a custom domain using Certbot.
- * Runs in background — does NOT block the HTTP response.
+ * Provisions a Let's Encrypt SSL cert for a custom tenant domain.
+ * Calls add-tenant-ssl.sh — no per-domain nginx files are created.
+ * One tenants-catchall.conf map entry is added and nginx is reloaded.
  */
 function provisionSslCertificate(domain: string): Promise<void> {
-  const cmd = [
-    `certbot --nginx`,
-    `-d ${domain}`,
-    `--non-interactive`,
-    `--agree-tos`,
-    `-m ${CERTBOT_EMAIL}`,
-    `--redirect`,
-    `--keep-until-expiring`,
-  ].join(" ");
+  const cmd = `bash "${SSL_SCRIPT}" "${domain}" "${CERTBOT_EMAIL}"`;
 
   console.log(`🔐 Starting SSL provisioning for: ${domain}`);
   return new Promise((resolve, reject) => {
-    exec(cmd, (err, stdout, stderr) => {
+    exec(cmd, { timeout: 120000 }, (err, stdout, stderr) => {
       if (err) {
         console.error(`❌ SSL provisioning failed for ${domain}:`, err.message);
         console.error(stderr);

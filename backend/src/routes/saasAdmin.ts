@@ -13,25 +13,22 @@ const JWT_SECRET = process.env.JWT_SECRET || "global_lms_super_secret_jwt_key_20
 const ROOT_DOMAIN = process.env.ROOT_DOMAIN || "lms.circleone.asia";
 const DEFAULT_CNAME = process.env.DEFAULT_CNAME_TARGET || "cname.lms.circleone.asia";
 const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL || "admin@circleone.asia";
+const SSL_SCRIPT = process.env.SSL_SCRIPT_PATH || "/var/www/global_lms/backend/scripts/add-tenant-ssl.sh";
 
 /**
- * Provisions a Let's Encrypt SSL certificate for a custom domain using Certbot.
- * Returns a Promise — awaitable so provisioning can wait before creating DB.
+ * Provisions a Let's Encrypt SSL cert for a custom tenant domain.
+ * Calls add-tenant-ssl.sh which:
+ *   1. Issues cert via certbot webroot (no per-domain nginx files created)
+ *   2. Adds the domain → cert mapping to the single tenants-catchall.conf
+ *   3. Reloads nginx
+ * Returns a Promise — awaited before DB provisioning begins.
  */
 function provisionSslCertificate(domain: string): Promise<void> {
-  const cmd = [
-    `certbot --nginx`,
-    `-d ${domain}`,
-    `--non-interactive`,
-    `--agree-tos`,
-    `-m ${CERTBOT_EMAIL}`,
-    `--redirect`,
-    `--keep-until-expiring`,
-  ].join(" ");
+  const cmd = `bash "${SSL_SCRIPT}" "${domain}" "${CERTBOT_EMAIL}"`;
 
   console.log(`🔐 Starting SSL provisioning for: ${domain}`);
   return new Promise((resolve, reject) => {
-    exec(cmd, (err, stdout, stderr) => {
+    exec(cmd, { timeout: 120000 }, (err, stdout, stderr) => {
       if (err) {
         console.error(`❌ SSL provisioning failed for ${domain}:`, err.message);
         console.error(stderr);
