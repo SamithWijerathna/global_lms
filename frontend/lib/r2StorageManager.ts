@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -154,15 +155,28 @@ export async function checkTenantR2Quota(
  */
 export async function uploadTenantMediaToR2(params: {
   tenantId: string;
-  fileBuffer: Buffer;
+  filePath?: string;
+  fileBuffer?: Buffer;
+  fileSizeBytes?: number;
   originalFileName: string;
   contentType?: string;
   maxMediaStorageGb?: number;
 }): Promise<R2UploadResult> {
-  const { tenantId, fileBuffer, originalFileName, contentType, maxMediaStorageGb = 10 } = params;
+  const { tenantId, filePath, fileBuffer, fileSizeBytes, originalFileName, contentType, maxMediaStorageGb = 10 } = params;
+
+  let sizeBytes = fileSizeBytes;
+  if (sizeBytes === undefined) {
+    if (fileBuffer) {
+      sizeBytes = fileBuffer.length;
+    } else if (filePath && fs.existsSync(filePath)) {
+      sizeBytes = fs.statSync(filePath).size;
+    } else {
+      sizeBytes = 0;
+    }
+  }
 
   // 1. Enforce quota
-  await checkTenantR2Quota(tenantId, fileBuffer.length, maxMediaStorageGb);
+  await checkTenantR2Quota(tenantId, sizeBytes, maxMediaStorageGb);
 
   const cleanId = tenantId.replace(/[^a-zA-Z0-9_-]/g, "");
   const ext = path.extname(originalFileName) || ".bin";
@@ -175,14 +189,51 @@ export async function uploadTenantMediaToR2(params: {
     const s3 = getS3Client();
     const bucket = process.env.R2_BUCKET_NAME!;
 
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: fileKey,
-        Body: fileBuffer,
-        ContentType: contentType || "application/octet-stream",
-      })
-    );
+    if (filePath && fs.existsSync(filePath)) {
+      // Memory-efficient streaming multipart upload (avoids Node.js OOM on large videos)
+      const parallelUploads = new Upload({
+        client: s3,
+        params: {
+          Bucket: bucket,
+          Key: fileKey,
+          Body: fs.createReadStream(filePath),
+          ContentType: contentType || "application/octet-stream",
+        },
+        partSize: 5 * 1024 * 1024, // 5MB parts
+        queueSize: 2, // Concurrency 2 for minimal RAM usage (~10MB)
+        leavePartsOnError: false,
+      });
+
+      await parallelUploads.done();
+    } else if (fileBuffer) {
+      if (fileBuffer.length > 5 * 1024 * 1024) {
+        const { Readable } = await import("stream");
+        const parallelUploads = new Upload({
+          client: s3,
+          params: {
+            Bucket: bucket,
+            Key: fileKey,
+            Body: Readable.from(fileBuffer),
+            ContentType: contentType || "application/octet-stream",
+          },
+          partSize: 5 * 1024 * 1024,
+          queueSize: 2,
+          leavePartsOnError: false,
+        });
+        await parallelUploads.done();
+      } else {
+        await s3.send(
+          new PutObjectCommand({
+            Bucket: bucket,
+            Key: fileKey,
+            Body: fileBuffer,
+            ContentType: contentType || "application/octet-stream",
+          })
+        );
+      }
+    } else {
+      throw new Error("Neither filePath nor fileBuffer was provided for upload.");
+    }
 
     // Invalidate cache
     r2UsageCache.delete(`r2_usage_${cleanId}`);
@@ -205,7 +256,7 @@ export async function uploadTenantMediaToR2(params: {
     return {
       url,
       fileKey,
-      sizeBytes: fileBuffer.length,
+      sizeBytes,
       provider: "r2",
     };
   }
@@ -218,12 +269,17 @@ export async function uploadTenantMediaToR2(params: {
 
   const fileName = `${fileUuid}_${safeName}${ext.toLowerCase()}`;
   const localFilePath = path.join(localDir, fileName);
-  await fs.promises.writeFile(localFilePath, fileBuffer);
+
+  if (filePath && fs.existsSync(filePath)) {
+    await fs.promises.copyFile(filePath, localFilePath);
+  } else if (fileBuffer) {
+    await fs.promises.writeFile(localFilePath, fileBuffer);
+  }
 
   return {
     url: `/uploads/tenants/${cleanId}/materials/${fileName}`,
     fileKey: `tenants/${cleanId}/materials/${fileName}`,
-    sizeBytes: fileBuffer.length,
+    sizeBytes,
     provider: "local_fallback",
   };
 }

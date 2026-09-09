@@ -260,13 +260,13 @@ export async function POST(req: Request) {
                         `${materialId}${ext}`;
 
       const meta = await getTenantMeta(req);
-      const fileBuffer = await fs.readFile(tempPath);
 
       let r2Res;
       try {
         r2Res = await uploadTenantMediaToR2({
           tenantId: meta.tenantId,
-          fileBuffer,
+          filePath: tempPath,
+          fileSizeBytes: stats.size,
           originalFileName: finalName,
           contentType: fileType === "video" ? "video/mp4" : fileType === "pdf" ? "application/pdf" : "image/jpeg",
           maxMediaStorageGb: meta.maxMediaStorageGb,
