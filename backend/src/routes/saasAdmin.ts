@@ -16,9 +16,9 @@ const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL || "admin@circleone.asia";
 
 /**
  * Provisions a Let's Encrypt SSL certificate for a custom domain using Certbot.
- * Runs non-interactively in the background so it doesn't block the HTTP response.
+ * Returns a Promise — awaitable so provisioning can wait before creating DB.
  */
-function provisionSslCertificate(domain: string): void {
+function provisionSslCertificate(domain: string): Promise<void> {
   const cmd = [
     `certbot --nginx`,
     `-d ${domain}`,
@@ -30,14 +30,18 @@ function provisionSslCertificate(domain: string): void {
   ].join(" ");
 
   console.log(`🔐 Starting SSL provisioning for: ${domain}`);
-  exec(cmd, (err, stdout, stderr) => {
-    if (err) {
-      console.error(`❌ SSL provisioning failed for ${domain}:`, err.message);
-      console.error(stderr);
-    } else {
-      console.log(`✅ SSL certificate issued for ${domain}`);
-      console.log(stdout);
-    }
+  return new Promise((resolve, reject) => {
+    exec(cmd, (err, stdout, stderr) => {
+      if (err) {
+        console.error(`❌ SSL provisioning failed for ${domain}:`, err.message);
+        console.error(stderr);
+        reject(new Error(`SSL certificate provisioning failed for '${domain}': ${stderr || err.message}`));
+      } else {
+        console.log(`✅ SSL certificate issued for ${domain}`);
+        console.log(stdout);
+        resolve();
+      }
+    });
   });
 }
 
@@ -249,7 +253,22 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
     const normStartDate = startDate || new Date().toISOString().split("T")[0];
     const normExpiryDate = expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    // 1. Insert Central SaaSTenant record
+    // 1. Provision SSL Certificate FIRST — before touching the database
+    // This ensures the domain is properly secured before any data is created.
+    let sslProvisioned = false;
+    try {
+      await provisionSslCertificate(targetDomain);
+      sslProvisioned = true;
+    } catch (sslErr: any) {
+      console.error(`⚠️ SSL provisioning failed, aborting tenant creation:`, sslErr.message);
+      return sendError(res, 502, "SSL_PROVISION_FAILED",
+        `SSL certificate could not be issued for '${targetDomain}'. ` +
+        `Please ensure the CNAME record is correctly pointed and try again. ` +
+        `Details: ${sslErr.message}`
+      );
+    }
+
+    // 2. Insert Central SaaSTenant record
     await pool.execute(
       `INSERT INTO SaaSTenant (id, name, slug, email, password, phone, plan, monthlyPrice, status, dbName, maxStorageMb, licenseKey, startDate, expiryDate)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)`,
@@ -270,13 +289,13 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
       ]
     );
 
-    // 2. Provision Tenant Database Schema
+    // 3. Provision Tenant Database Schema
     const schemaOk = await cloneTenantSchema(dbName);
     if (!schemaOk) {
       console.warn(`Database schema creation had warnings for ${dbName}`);
     }
 
-    // 3. Seed Tenant Default Admin User
+    // 4. Seed Tenant Default Admin User
     const tenantPool = getTenantPool(dbName);
     await dbStorage.run(tenantPool, async () => {
       const adminUuid = crypto.randomUUID();
@@ -287,7 +306,7 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
       );
     });
 
-    // 4. Register Primary Domain
+    // 5. Register Primary Domain (mark SSL as active since cert was issued)
     const domainId = crypto.randomUUID();
     const token = crypto.randomBytes(16).toString("hex");
     await pool.execute(
@@ -296,7 +315,7 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
       [domainId, tenantId, targetDomain, DEFAULT_CNAME, token]
     );
 
-    // 5. Register in TenantRouting table
+    // 6. Register in TenantRouting table
     const routeId = crypto.randomUUID();
     await pool.execute(
       `INSERT INTO TenantRouting (id, domain, tenantId, tenantSlug, tenantDbName, status)
@@ -304,7 +323,7 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
       [routeId, targetDomain, tenantId, derivedSlug, dbName]
     );
 
-    // 6. Initial invoice creation if requested
+    // 7. Initial invoice creation if requested
     if (initialInvoiceAmount && parseFloat(initialInvoiceAmount) > 0) {
       const invoiceId = crypto.randomUUID();
       const invNumber = `INV-${new Date().getFullYear()}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
@@ -317,9 +336,6 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
 
     clearRouteCache();
 
-    // 7. Auto-provision SSL certificate for the custom domain (background, non-blocking)
-    provisionSslCertificate(targetDomain);
-
     return sendSuccess(
       res,
       {
@@ -331,6 +347,7 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
         adminEmail: email,
         initialPassword,
         licenseKey,
+        sslProvisioned,
       },
       "Tenant provisioned successfully",
       201

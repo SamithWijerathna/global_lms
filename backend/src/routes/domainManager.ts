@@ -14,7 +14,7 @@ const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL || "admin@circleone.asia";
  * Provisions a Let's Encrypt SSL certificate for a custom domain using Certbot.
  * Runs in background — does NOT block the HTTP response.
  */
-function provisionSslCertificate(domain: string): void {
+function provisionSslCertificate(domain: string): Promise<void> {
   const cmd = [
     `certbot --nginx`,
     `-d ${domain}`,
@@ -26,14 +26,18 @@ function provisionSslCertificate(domain: string): void {
   ].join(" ");
 
   console.log(`🔐 Starting SSL provisioning for: ${domain}`);
-  exec(cmd, (err, stdout, stderr) => {
-    if (err) {
-      console.error(`❌ SSL provisioning failed for ${domain}:`, err.message);
-      console.error(stderr);
-    } else {
-      console.log(`✅ SSL certificate issued for ${domain}`);
-      console.log(stdout);
-    }
+  return new Promise((resolve, reject) => {
+    exec(cmd, (err, stdout, stderr) => {
+      if (err) {
+        console.error(`❌ SSL provisioning failed for ${domain}:`, err.message);
+        console.error(stderr);
+        reject(new Error(`SSL certificate provisioning failed for '${domain}': ${stderr || err.message}`));
+      } else {
+        console.log(`✅ SSL certificate issued for ${domain}`);
+        console.log(stdout);
+        resolve();
+      }
+    });
   });
 }
 
@@ -164,15 +168,33 @@ router.post("/:id/verify", authMiddleware, async (req, res) => {
 
       clearRouteCache(d.domain);
 
-      // Auto-provision SSL certificate for the verified custom domain (background, non-blocking)
-      provisionSslCertificate(d.domain);
+      // Await SSL certificate provisioning before responding
+      let sslProvisioned = false;
+      try {
+        await provisionSslCertificate(d.domain);
+        sslProvisioned = true;
+        // Update sslStatus to active now that cert is confirmed
+        await pool.execute(
+          "UPDATE TenantDomain SET sslStatus = 'active' WHERE id = ?",
+          [id]
+        );
+      } catch (sslErr: any) {
+        console.error(`⚠️ SSL provisioning failed for ${d.domain}:`, sslErr.message);
+        await pool.execute(
+          "UPDATE TenantDomain SET sslStatus = 'pending' WHERE id = ?",
+          [id]
+        );
+      }
 
       return sendSuccess(res, {
         verified: true,
         isVerified: 1,
-        sslStatus: "active",
+        sslStatus: sslProvisioned ? "active" : "pending",
+        sslProvisioned,
         details: dnsResult,
-        message: "Domain successfully verified and activated!",
+        message: sslProvisioned
+          ? "Domain verified and SSL certificate issued successfully!"
+          : "Domain verified, but SSL certificate provisioning failed. Please retry.",
       });
     }
 
