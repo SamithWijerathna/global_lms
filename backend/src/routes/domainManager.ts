@@ -7,7 +7,7 @@ import { sendSuccess, sendError } from "../lib/routeUtils";
 import { authMiddleware } from "../middleware/auth";
 
 const router = Router();
-const DEFAULT_CNAME = process.env.DEFAULT_CNAME_TARGET || "cname.globallms.com";
+const DEFAULT_CNAME = process.env.DEFAULT_CNAME_TARGET || "cname.lms.circleone.asia";
 const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL || "admin@circleone.asia";
 const SSL_SCRIPT = process.env.SSL_SCRIPT_PATH || "/var/www/global_lms/backend/scripts/add-tenant-ssl.sh";
 

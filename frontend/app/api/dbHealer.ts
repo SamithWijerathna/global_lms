@@ -166,6 +166,24 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
           setting_value TEXT NOT NULL,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "admin_users",
+        sql: `CREATE TABLE IF NOT EXISTS admin_users (
+          id INT NOT NULL AUTO_INCREMENT,
+          uuid VARCHAR(255) NOT NULL UNIQUE,
+          first_name VARCHAR(100) NOT NULL,
+          last_name VARCHAR(100) NOT NULL,
+          user_email VARCHAR(191) NOT NULL UNIQUE,
+          user_password VARCHAR(255) NOT NULL,
+          role VARCHAR(50) DEFAULT 'admin',
+          permission_id INT DEFAULT 1,
+          theme_preference VARCHAR(50) DEFAULT 'light',
+          profile_photo VARCHAR(255) DEFAULT NULL,
+          create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
       }
     ];
 

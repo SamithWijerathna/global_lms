@@ -707,8 +707,37 @@ INSERT INTO `class_types` (`type_code`, `type_name`, `description`) VALUES
 ('revision+paper', 'Revision + Paper', 'Combined Revision & Paper Class'),
 ('other', 'Other', 'Other Special Class');
 
+-- --------------------------------------------------------
+
+DROP TABLE IF EXISTS `admin_users`;
+CREATE TABLE IF NOT EXISTS `admin_users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `uuid` varchar(255) NOT NULL UNIQUE,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `user_email` varchar(191) NOT NULL UNIQUE,
+  `user_password` varchar(255) NOT NULL,
+  `role` varchar(50) DEFAULT 'admin',
+  `permission_id` int DEFAULT 1,
+  `theme_preference` varchar(50) DEFAULT 'light',
+  `profile_photo` varchar(255) DEFAULT NULL,
+  `create_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+DROP TABLE IF EXISTS `system_settings`;
+CREATE TABLE IF NOT EXISTS `system_settings` (
+  `setting_key` varchar(100) NOT NULL PRIMARY KEY,
+  `setting_value` text NOT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+

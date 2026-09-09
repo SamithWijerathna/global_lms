@@ -161,6 +161,68 @@ export async function cloneTenantSchema(targetDb: string): Promise<boolean> {
         console.warn(`DDL warning on ${targetDb}:`, err.message);
       }
     }
+
+    // Ensure admin_users table exists
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(255) NOT NULL UNIQUE,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        user_email VARCHAR(191) NOT NULL UNIQUE,
+        user_password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'admin',
+        permission_id INT DEFAULT 1,
+        theme_preference VARCHAR(50) DEFAULT 'light',
+        profile_photo VARCHAR(255) DEFAULT NULL,
+        create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Seed default permission roles
+    await conn.query(`
+      INSERT INTO permission (id, role_name, data) VALUES
+      (1, 'developer', '{"class": 15, "config": 15, "student": 15, "studypack": 15}'),
+      (2, 'admin', '{"class": 15, "config": 15, "student": 15, "studypack": 15}'),
+      (3, 'teacher', '{"class": 15, "config": 0, "student": 7, "studypack": 7}'),
+      (4, 'accountant', '{"class": 0, "config": 0, "student": 7, "studypack": 0}')
+      ON DUPLICATE KEY UPDATE role_name = VALUES(role_name);
+    `);
+
+    // Seed default class_types
+    await conn.query(`
+      INSERT INTO class_types (type_code, type_name, description) VALUES
+      ('theory', 'Theory', 'Theory Class'),
+      ('revision', 'Revision', 'Revision Class'),
+      ('physical', 'Paper', 'Paper Class'),
+      ('revision+paper', 'Revision + Paper', 'Combined Revision & Paper Class'),
+      ('other', 'Other', 'Other Special Class')
+      ON DUPLICATE KEY UPDATE type_name = VALUES(type_name);
+    `);
+
+    // Seed default batches
+    await conn.query(`
+      INSERT INTO batches (batch_code, batch_name, description) VALUES
+      ('2026AL', '2026 A/L', 'Batch for 2026 Advanced Level students'),
+      ('2027AL', '2027 A/L', 'Batch for 2027 Advanced Level students')
+      ON DUPLICATE KEY UPDATE batch_name = VALUES(batch_name);
+    `);
+
+    // Ensure system_settings table exists & seeded
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
+        setting_value TEXT NOT NULL,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    await conn.query(`
+      INSERT INTO system_settings (setting_key, setting_value) VALUES
+      ('monthly_target', '500000')
+      ON DUPLICATE KEY UPDATE setting_key = VALUES(setting_key);
+    `);
+
     await conn.query("SET FOREIGN_KEY_CHECKS = 1");
 
     console.log(`Successfully initialized tenant database schema for: ${targetDb}`);

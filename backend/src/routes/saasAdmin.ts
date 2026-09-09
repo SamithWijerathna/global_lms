@@ -250,22 +250,7 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
     const normStartDate = startDate || new Date().toISOString().split("T")[0];
     const normExpiryDate = expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    // 1. Provision SSL Certificate FIRST — before touching the database
-    // This ensures the domain is properly secured before any data is created.
-    let sslProvisioned = false;
-    try {
-      await provisionSslCertificate(targetDomain);
-      sslProvisioned = true;
-    } catch (sslErr: any) {
-      console.error(`⚠️ SSL provisioning failed, aborting tenant creation:`, sslErr.message);
-      return sendError(res, 502, "SSL_PROVISION_FAILED",
-        `SSL certificate could not be issued for '${targetDomain}'. ` +
-        `Please ensure the CNAME record is correctly pointed and try again. ` +
-        `Details: ${sslErr.message}`
-      );
-    }
-
-    // 2. Insert Central SaaSTenant record
+    // 1. Insert Central SaaSTenant record
     await pool.execute(
       `INSERT INTO SaaSTenant (id, name, slug, email, password, phone, plan, monthlyPrice, status, dbName, maxStorageMb, licenseKey, startDate, expiryDate)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)`,
@@ -286,39 +271,62 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
       ]
     );
 
-    // 3. Provision Tenant Database Schema
+    // 2. Provision Tenant Database Schema
     const schemaOk = await cloneTenantSchema(dbName);
     if (!schemaOk) {
       console.warn(`Database schema creation had warnings for ${dbName}`);
     }
 
-    // 4. Seed Tenant Default Admin User
+    // 3. Seed Tenant Default Admin User in admin_users AND users tables
     const tenantPool = getTenantPool(dbName);
     await dbStorage.run(tenantPool, async () => {
       const adminUuid = crypto.randomUUID();
+      // Primary: seed admin_users for LMS Admin panel (/admin/login)
+      await dbQuery(
+        `INSERT INTO admin_users (uuid, first_name, last_name, user_email, user_password, role, permission_id, theme_preference)
+         VALUES (?, 'Admin', ?, ?, ?, 'admin', 1, 'light')
+         ON DUPLICATE KEY UPDATE user_password = VALUES(user_password)`,
+        [adminUuid, name.trim(), email.trim().toLowerCase(), hashedPassword]
+      );
+
+      // Compatibility: also seed users table for student portal
       await dbQuery(
         `INSERT INTO users (uuid, student_id, first_name, last_name, user_email, phone, user_password, profile_completed)
-         VALUES (?, 'ADM0001', 'Admin', ?, ?, ?, ?, 1)`,
+         VALUES (?, 'ADM0001', 'Admin', ?, ?, ?, ?, 1)
+         ON DUPLICATE KEY UPDATE user_password = VALUES(user_password)`,
         [adminUuid, name.trim(), email.trim().toLowerCase(), phone || "0770000000", hashedPassword]
       );
     });
 
-    // 5. Register Primary Domain (mark SSL as active since cert was issued)
+    // 4. Register Primary Domain in TenantDomain
     const domainId = crypto.randomUUID();
     const token = crypto.randomBytes(16).toString("hex");
     await pool.execute(
       `INSERT INTO TenantDomain (id, tenantId, domain, type, cnameTarget, verificationToken, isVerified, isPrimary, sslStatus)
-       VALUES (?, ?, ?, 'custom_domain', ?, ?, 1, 1, 'active')`,
+       VALUES (?, ?, ?, 'custom_domain', ?, ?, 0, 1, 'pending')`,
       [domainId, tenantId, targetDomain, DEFAULT_CNAME, token]
     );
 
-    // 6. Register in TenantRouting table
+    // 5. Register in TenantRouting table
     const routeId = crypto.randomUUID();
     await pool.execute(
       `INSERT INTO TenantRouting (id, domain, tenantId, tenantSlug, tenantDbName, status)
        VALUES (?, ?, ?, ?, ?, 'active')`,
       [routeId, targetDomain, tenantId, derivedSlug, dbName]
     );
+
+    // 6. Non-blocking SSL provisioning attempt (doesn't fail creation if DNS is pending)
+    let sslProvisioned = false;
+    try {
+      await provisionSslCertificate(targetDomain);
+      sslProvisioned = true;
+      await pool.execute(
+        "UPDATE TenantDomain SET isVerified = 1, sslStatus = 'active' WHERE id = ?",
+        [domainId]
+      );
+    } catch (sslErr: any) {
+      console.warn(`ℹ️ SSL provisioning deferred for ${targetDomain} (DNS may be pending):`, sslErr.message);
+    }
 
     // 7. Initial invoice creation if requested
     if (initialInvoiceAmount && parseFloat(initialInvoiceAmount) > 0) {
@@ -345,12 +353,43 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
         initialPassword,
         licenseKey,
         sslProvisioned,
+        sslStatus: sslProvisioned ? "active" : "pending",
+        instructions: {
+          step1: `Add a CNAME record in your DNS provider pointing '${targetDomain}' to '${DEFAULT_CNAME}'.`,
+          step2: `Once DNS propagates, SSL will activate automatically or can be verified in SaaS Admin.`,
+        },
       },
       "Tenant provisioned successfully",
       201
     );
   } catch (err: any) {
     return sendError(res, 500, "TENANT_CREATION_FAILED", err.message || "Tenant provisioning failed.");
+  }
+});
+
+// 3.1 Retry / Provision SSL for an existing tenant
+router.post("/tenants/:id/provision-ssl", authMiddleware, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [domainRows] = await pool.execute<any[]>(
+      "SELECT id, domain, isPrimary FROM TenantDomain WHERE tenantId = ? AND isPrimary = 1 LIMIT 1",
+      [id]
+    );
+
+    if (domainRows.length === 0) {
+      return sendError(res, 404, "DOMAIN_NOT_FOUND", "No primary domain found for this tenant.");
+    }
+
+    const d = domainRows[0];
+    await provisionSslCertificate(d.domain);
+    await pool.execute(
+      "UPDATE TenantDomain SET isVerified = 1, sslStatus = 'active', lastCheckedAt = NOW() WHERE id = ?",
+      [d.id]
+    );
+
+    return sendSuccess(res, { domain: d.domain, sslStatus: "active" }, "SSL certificate issued successfully.");
+  } catch (err: any) {
+    return sendError(res, 502, "SSL_PROVISION_FAILED", `SSL provisioning failed: ${err.message}`);
   }
 });
 

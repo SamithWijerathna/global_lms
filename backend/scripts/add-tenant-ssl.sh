@@ -11,6 +11,9 @@ set -e
 DOMAIN="$1"
 EMAIL="${2:-admin@circleone.asia}"
 CONF="/etc/nginx/sites-available/tenants-catchall.conf"
+if [ ! -f "$CONF" ] && [ -f "/etc/nginx/conf.d/tenants-catchall.conf" ]; then
+  CONF="/etc/nginx/conf.d/tenants-catchall.conf"
+fi
 WEBROOT="/var/www/letsencrypt"
 CERT="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 KEY="/etc/letsencrypt/live/$DOMAIN/privkey.pem"

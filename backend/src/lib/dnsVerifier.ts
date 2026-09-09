@@ -50,6 +50,18 @@ export async function checkCustomDomainDns(
     }
   };
 
+  const resolveIps = async (host: string): Promise<string[]> => {
+    try {
+      return await publicResolver.resolve4(host);
+    } catch (_) {
+      try {
+        return await dns.resolve4(host);
+      } catch (_) {
+        return [];
+      }
+    }
+  };
+
   // 1. Check CNAME record
   try {
     const cnameRecords = await resolveCname(cleanDomain);
@@ -58,37 +70,70 @@ export async function checkCustomDomainDns(
       (c) => c === cleanTarget || c.endsWith(`.${cleanTarget}`)
     );
   } catch (err: any) {
-    // No CNAME found or domain not resolved
+    // No direct CNAME found
   }
 
-  // 2. Check TXT record verification (e.g. volit-verification=<token>)
-  const expectedTxtPrefix = `volit-verification=${expectedToken}`;
+  // 1b. Fallback: If CNAME flattening or A-record pointing is used, check IP resolution match
+  if (!cnameMatched && cleanTarget) {
+    try {
+      const [targetIps, domainIps] = await Promise.all([
+        resolveIps(cleanTarget),
+        resolveIps(cleanDomain),
+      ]);
+      if (targetIps.length > 0 && domainIps.length > 0) {
+        const ipMatched = domainIps.some((ip) => targetIps.includes(ip));
+        if (ipMatched) {
+          cnameMatched = true;
+          currentCnames.push(`A-RECORD:${domainIps.join(",")}`);
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. Check TXT record verification (supports globallms-verification= and volit-verification=)
+  const validPrefixes = [
+    `globallms-verification=${expectedToken}`,
+    `volit-verification=${expectedToken}`,
+  ];
   try {
     const txtRecords = await resolveTxt(cleanDomain);
     currentTxts = txtRecords.flat();
     txtMatched = currentTxts.some(
-      (txt) => txt === expectedToken || txt === expectedTxtPrefix || txt.includes(expectedToken)
+      (txt) =>
+        txt === expectedToken ||
+        validPrefixes.includes(txt) ||
+        (expectedToken && txt.includes(expectedToken))
     );
   } catch (err: any) {
     // No TXT record found
   }
 
-  // Fallback: check TXT record on subdomain _volit-challenge.<domain>
+  // Fallback: check TXT record on challenge subdomains (_globallms-challenge and _volit-challenge)
   if (!txtMatched && expectedToken) {
-    try {
-      const challengeDomain = `_volit-challenge.${cleanDomain}`;
-      const challengeTxts = (await resolveTxt(challengeDomain)).flat();
-      currentTxts.push(...challengeTxts);
-      txtMatched = challengeTxts.some(
-        (txt) => txt === expectedToken || txt === expectedTxtPrefix || txt.includes(expectedToken)
-      );
-    } catch (_) {}
+    for (const prefix of ["_globallms-challenge", "_volit-challenge"]) {
+      try {
+        const challengeDomain = `${prefix}.${cleanDomain}`;
+        const challengeTxts = (await resolveTxt(challengeDomain)).flat();
+        currentTxts.push(...challengeTxts);
+        if (
+          challengeTxts.some(
+            (txt) =>
+              txt === expectedToken ||
+              validPrefixes.includes(txt) ||
+              txt.includes(expectedToken)
+          )
+        ) {
+          txtMatched = true;
+          break;
+        }
+      } catch (_) {}
+    }
   }
 
   const verified = cnameMatched || txtMatched;
   let message = "Domain verification successful.";
   if (!verified) {
-    message = `DNS record not found. Please ensure your DNS has a CNAME record pointing to '${cleanTarget}' or a TXT record with '${expectedTxtPrefix}'.`;
+    message = `DNS record not found. Please ensure your DNS has a CNAME record pointing to '${cleanTarget}' or a TXT record with 'globallms-verification=${expectedToken}'.`;
   }
 
   return {

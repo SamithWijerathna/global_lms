@@ -79,6 +79,7 @@ export default function SaaSAdminPage() {
   // Tenant Deletion State
   const [deletingTenant, setDeletingTenant] = useState<TenantItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [provisioningSslId, setProvisioningSslId] = useState<string | null>(null);
 
   const fetchTenants = async (authToken: string) => {
     setLoadingTenants(true);
@@ -234,6 +235,28 @@ export default function SaaSAdminPage() {
     }
   };
 
+  const handleProvisionSsl = async (tenantId: string) => {
+    setProvisioningSslId(tenantId);
+    const apiUrl = getBackendApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/saas-admin/tenants/${tenantId}/provision-ssl`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message || "SSL certificate issued successfully!");
+        fetchTenants(token);
+      } else {
+        alert(data.error?.message || "Failed to provision SSL.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Network error while provisioning SSL.");
+    } finally {
+      setProvisioningSslId(null);
+    }
+  };
+
   const resetModal = () => {
     setCreatedResult(null);
     setDnsStatus(null);
@@ -382,14 +405,25 @@ export default function SaaSAdminPage() {
                     {new Date(t.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell align="center">
-                    <Button
-                      size="sm"
-                      color="danger"
-                      variant="flat"
-                      onPress={() => setDeletingTenant(t)}
-                    >
-                      🗑️ Delete
-                    </Button>
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        size="sm"
+                        color="primary"
+                        variant="flat"
+                        isLoading={provisioningSslId === t.id}
+                        onPress={() => handleProvisionSsl(t.id)}
+                      >
+                        🔒 Provision SSL
+                      </Button>
+                      <Button
+                        size="sm"
+                        color="danger"
+                        variant="flat"
+                        onPress={() => setDeletingTenant(t)}
+                      >
+                        🗑️ Delete
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
