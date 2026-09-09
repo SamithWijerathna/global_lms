@@ -2,6 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { exec } from "child_process";
 import { pool, getTenantPool, dbStorage, dbQuery, cloneTenantSchema, clearRouteCache } from "../lib/db";
 import { checkCustomDomainDns } from "../lib/dnsVerifier";
 import { sendSuccess, sendError } from "../lib/routeUtils";
@@ -11,6 +12,34 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "global_lms_super_secret_jwt_key_2026_secure";
 const ROOT_DOMAIN = process.env.ROOT_DOMAIN || "lms.circleone.asia";
 const DEFAULT_CNAME = process.env.DEFAULT_CNAME_TARGET || "cname.lms.circleone.asia";
+const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL || "admin@circleone.asia";
+
+/**
+ * Provisions a Let's Encrypt SSL certificate for a custom domain using Certbot.
+ * Runs non-interactively in the background so it doesn't block the HTTP response.
+ */
+function provisionSslCertificate(domain: string): void {
+  const cmd = [
+    `certbot --nginx`,
+    `-d ${domain}`,
+    `--non-interactive`,
+    `--agree-tos`,
+    `-m ${CERTBOT_EMAIL}`,
+    `--redirect`,
+    `--keep-until-expiring`,
+  ].join(" ");
+
+  console.log(`🔐 Starting SSL provisioning for: ${domain}`);
+  exec(cmd, (err, stdout, stderr) => {
+    if (err) {
+      console.error(`❌ SSL provisioning failed for ${domain}:`, err.message);
+      console.error(stderr);
+    } else {
+      console.log(`✅ SSL certificate issued for ${domain}`);
+      console.log(stdout);
+    }
+  });
+}
 
 // 1. Super Admin Login
 router.post("/login", async (req, res) => {
@@ -287,6 +316,9 @@ router.post("/tenants", authMiddleware, requireSuperAdmin, async (req, res) => {
     }
 
     clearRouteCache();
+
+    // 7. Auto-provision SSL certificate for the custom domain (background, non-blocking)
+    provisionSslCertificate(targetDomain);
 
     return sendSuccess(
       res,

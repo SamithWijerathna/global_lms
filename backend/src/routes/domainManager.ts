@@ -1,5 +1,6 @@
 import { Router } from "express";
 import crypto from "crypto";
+import { exec } from "child_process";
 import { pool, clearRouteCache } from "../lib/db";
 import { checkCustomDomainDns } from "../lib/dnsVerifier";
 import { sendSuccess, sendError } from "../lib/routeUtils";
@@ -7,6 +8,34 @@ import { authMiddleware } from "../middleware/auth";
 
 const router = Router();
 const DEFAULT_CNAME = process.env.DEFAULT_CNAME_TARGET || "cname.globallms.com";
+const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL || "admin@circleone.asia";
+
+/**
+ * Provisions a Let's Encrypt SSL certificate for a custom domain using Certbot.
+ * Runs in background — does NOT block the HTTP response.
+ */
+function provisionSslCertificate(domain: string): void {
+  const cmd = [
+    `certbot --nginx`,
+    `-d ${domain}`,
+    `--non-interactive`,
+    `--agree-tos`,
+    `-m ${CERTBOT_EMAIL}`,
+    `--redirect`,
+    `--keep-until-expiring`,
+  ].join(" ");
+
+  console.log(`🔐 Starting SSL provisioning for: ${domain}`);
+  exec(cmd, (err, stdout, stderr) => {
+    if (err) {
+      console.error(`❌ SSL provisioning failed for ${domain}:`, err.message);
+      console.error(stderr);
+    } else {
+      console.log(`✅ SSL certificate issued for ${domain}`);
+      console.log(stdout);
+    }
+  });
+}
 
 // 1. Get all domains for the active tenant
 router.get("/", authMiddleware, async (req, res) => {
@@ -134,6 +163,9 @@ router.post("/:id/verify", authMiddleware, async (req, res) => {
       }
 
       clearRouteCache(d.domain);
+
+      // Auto-provision SSL certificate for the verified custom domain (background, non-blocking)
+      provisionSslCertificate(d.domain);
 
       return sendSuccess(res, {
         verified: true,
