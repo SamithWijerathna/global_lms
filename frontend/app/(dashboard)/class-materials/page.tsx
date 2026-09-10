@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Spinner } from "@heroui/spinner";
 import {
   Card,
@@ -437,7 +438,11 @@ function MaterialViewer({
   );
 }
 
-export default function QuickAccessPage() {
+function QuickAccessContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetMaterialId = searchParams ? (searchParams.get("material_id") || searchParams.get("id")) : null;
+
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [pendingClassIds, setPendingClassIds] = useState<string[]>([]);
@@ -453,6 +458,45 @@ export default function QuickAccessPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+
+  // Auto-open material if targetMaterialId is passed from Dashboard recent cards
+  useEffect(() => {
+    if (!targetMaterialId) return;
+
+    // Check if already in allMaterials
+    const found = allMaterials.find(
+      (m) =>
+        String(m.material_id) === String(targetMaterialId) ||
+        String((m as any).id) === String(targetMaterialId)
+    );
+    if (found) {
+      setSelectedMaterial(found);
+      return;
+    }
+
+    // Fallback: fetch from /api/class-materials
+    let active = true;
+    fetch("/api/class-materials")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        if (Array.isArray(data.materials)) {
+          const match = data.materials.find(
+            (m: any) =>
+              String(m.material_id) === String(targetMaterialId) ||
+              String(m.id) === String(targetMaterialId)
+          );
+          if (match) {
+            setSelectedMaterial(match);
+          }
+        }
+      })
+      .catch(console.error);
+
+    return () => {
+      active = false;
+    };
+  }, [targetMaterialId, allMaterials]);
 
   useEffect(() => {
     if (!user?.uuid) {
@@ -696,7 +740,10 @@ export default function QuickAccessPage() {
     return (
       <MaterialViewer
         material={selectedMaterial}
-        onBack={() => setSelectedMaterial(null)}
+        onBack={() => {
+          setSelectedMaterial(null);
+          router.replace("/class-materials");
+        }}
       />
     );
   }
@@ -1027,5 +1074,24 @@ export default function QuickAccessPage() {
         </ModalContent>
       </Modal>
     </div>
+  );
+}
+
+export default function QuickAccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full space-y-6 pb-12">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-left">
+            Class Materials
+          </h1>
+          <div className="w-full h-80 flex items-center justify-center">
+            <Spinner size="md" />
+          </div>
+        </div>
+      }
+    >
+      <QuickAccessContent />
+    </Suspense>
   );
 }

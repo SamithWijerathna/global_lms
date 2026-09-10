@@ -506,10 +506,12 @@ export default function DashboardPage() {
                   {materials.map((m: any, idx: number) => {
                     const isVideo = m.material_type === "video";
                     const coverImg = getMaterialCoverImage(m);
+                    const materialId = m.material_id || m.id;
                     return (
-                      <div
-                        key={`mat-${m.id || m.material_id || idx}-${idx}`}
-                        className="min-w-[280px] sm:min-w-[310px] max-w-[330px] flex-shrink-0 snap-start group flex flex-col justify-between border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-gray-50/50 dark:bg-gray-800/30 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-all shadow-xs"
+                      <Link
+                        key={`mat-${materialId || idx}-${idx}`}
+                        href={`/class-materials?material_id=${materialId}`}
+                        className="min-w-[280px] sm:min-w-[310px] max-w-[330px] flex-shrink-0 snap-start group flex flex-col justify-between border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-gray-50/50 dark:bg-gray-800/30 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer block text-left"
                       >
                         {/* Preview Thumbnail Banner */}
                         <div className="relative w-full aspect-video bg-slate-950 overflow-hidden">
@@ -565,16 +567,13 @@ export default function DashboardPage() {
                             <span className="text-[11px] text-gray-400 font-medium">
                               {m.create_at ? new Date(m.create_at).toLocaleDateString() : "Recent"}
                             </span>
-                            <Link
-                              href="/class-materials"
-                              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                            >
+                            <div className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 group-hover:underline">
                               <span>Open</span>
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </Link>
+                              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
