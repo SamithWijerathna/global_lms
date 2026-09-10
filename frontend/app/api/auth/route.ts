@@ -43,18 +43,130 @@ const getEmailBrandHeader = (siteTitle: string, logoPath?: string) => {
   }
 
   if (isAligned && logoPath) {
-    return `<div style="margin-bottom: 24px; text-align: center;">
-      <img src="${logoPath}" alt="${siteTitle}" style="max-height: 52px; width: auto; display: inline-block;" />
+    return `<div style="margin-bottom: 12px; text-align: center;">
+      <img src="${logoPath}" alt="${siteTitle}" style="max-height: 48px; width: auto; display: inline-block;" />
     </div>`;
   }
 
   // High-deliverability CSS badge that renders reliably across all email clients without triggering cross-domain warnings
-  return `<div style="margin-bottom: 24px; text-align: center;">
-    <div style="display: inline-block; background: #07383E; color: #ffffff; padding: 10px 24px; border-radius: 10px; font-size: 20px; font-weight: 800; letter-spacing: -0.3px; text-transform: uppercase;">
+  return `<div style="margin-bottom: 8px; text-align: center;">
+    <div style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 8px 20px; border-radius: 8px; font-size: 18px; font-weight: 700; letter-spacing: -0.2px;">
       ${siteTitle}
     </div>
   </div>`;
 };
+
+interface TransactionalEmailOptions {
+  siteTitle: string;
+  siteShortName?: string;
+  logoPath?: string;
+  heading: string;
+  description: string;
+  code: string;
+  expiresInText: string;
+  securityNote?: string;
+  copyrightText?: string;
+}
+
+const buildTransactionalEmailHtml = ({
+  siteTitle,
+  siteShortName,
+  logoPath,
+  heading,
+  description,
+  code,
+  expiresInText,
+  securityNote,
+  copyrightText,
+}: TransactionalEmailOptions) => {
+  const brandName = siteShortName || siteTitle || "Volit LMS";
+  const brandHeader = getEmailBrandHeader(brandName, logoPath);
+  const copyright = copyrightText || `© ${new Date().getFullYear()} ${brandName}. All rights reserved.`;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${heading}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); overflow: hidden;">
+          
+          <!-- Top Accent Bar -->
+          <tr>
+            <td height="4" style="background: linear-gradient(90deg, #0ea5e9 0%, #3b82f6 50%, #6366f1 100%);"></td>
+          </tr>
+
+          <!-- Content Padding -->
+          <tr>
+            <td style="padding: 36px 32px 32px 32px; text-align: center;">
+              
+              <!-- Brand Header -->
+              <div style="margin-bottom: 24px;">
+                ${brandHeader}
+                <div style="font-size: 13px; font-weight: 600; color: #64748b; letter-spacing: 0.5px; margin-top: 6px; text-transform: uppercase;">
+                  Volit LMS System
+                </div>
+              </div>
+
+              <!-- Heading -->
+              <h1 style="margin: 0 0 12px 0; font-size: 22px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+                ${heading}
+              </h1>
+
+              <!-- Description -->
+              <p style="margin: 0 0 24px 0; font-size: 15px; color: #475569; line-height: 1.6;">
+                ${description}
+              </p>
+
+              <!-- Code Box -->
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 24px; margin: 0 0 20px 0;">
+                <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f172a; font-family: 'Courier New', Courier, monospace; line-height: 1.2;">
+                  ${code}
+                </div>
+                <div style="font-size: 13px; color: #64748b; margin-top: 8px; font-weight: 500;">
+                  This code expires in <strong style="color: #0f172a;">${expiresInText}</strong>
+                </div>
+              </div>
+
+              <!-- Security Note -->
+              <p style="margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.5;">
+                ${securityNote || "If you did not make this request, please safely ignore this email or contact your administrator."}
+              </p>
+
+              <!-- Divider -->
+              <div style="margin: 28px 0 20px 0; border-top: 1px solid #f1f5f9;"></div>
+
+              <!-- Footer -->
+              <div style="text-align: center;">
+                <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748b; font-weight: 600;">
+                  ${brandName} • Volit LMS System
+                </p>
+                <p style="margin: 0 0 4px 0; font-size: 11px; color: #94a3b8;">
+                  ${copyright}
+                </p>
+                <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                  Developed and Maintained by Cloudwave (Pvt) Ltd
+                </p>
+              </div>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+};
+
 
 
 // ==================== GET - Fetch user(s) ====================
@@ -280,30 +392,17 @@ export async function POST(req: Request) {
           from: getResendFrom(sysSettings.site_short_name || sysSettings.site_title),
           to: email,
           subject: `🔐 Your ${sysSettings.site_short_name || "OTP"} Verification Code`,
-          html: `
-            <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f8f6; padding: 40px 15px; text-align: center;">
-              <div style="background: #ffffff; max-width: 480px; margin: 0 auto; padding: 36px 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(7, 56, 62, 0.08); border: 1px solid #e5efe9;">
-                ${getEmailBrandHeader(sysSettings.site_short_name || sysSettings.site_title, sysSettings.site_logo_url)}
-                <h2 style="color: #07383E; font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">${sysSettings.site_title} Verification</h2>
-                <p style="color: #38605c; font-size: 15px; line-height: 1.5; margin-bottom: 28px;">
-                  Use the following One-Time Password (OTP) to verify your account. This code will expire in <b>10 minutes</b>.
-                </p>
-                <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #07383E; background: #eef8f2; display: inline-block; padding: 14px 28px; border-radius: 12px; border: 1px solid #66D47E; margin-bottom: 24px;">
-                  ${code}
-                </div>
-                <p style="color: #6a8c88; font-size: 13px; margin-bottom: 0;">
-                  If you didn't request this code, please ignore this email.
-                </p>
-                <hr style="border: none; border-top: 1px solid #e8f2ec; margin: 28px 0;" />
-                <p style="font-size: 12px; color: #8aa8a3; margin-bottom: 6px;">
-                  ${sysSettings.copyright_text}
-                </p>
-                <p style="font-size: 12px; color: #8aa8a3; margin: 0;">
-                  Developed and Maintained by CloudWave
-                </p>
-              </div>
-            </div>
-          `,
+          html: buildTransactionalEmailHtml({
+            siteTitle: sysSettings.site_title,
+            siteShortName: sysSettings.site_short_name,
+            logoPath: sysSettings.site_logo_url,
+            heading: "Account Verification Code",
+            description: "Use the One-Time Password (OTP) below to verify your account and complete your sign up.",
+            code,
+            expiresInText: "10 minutes",
+            securityNote: "If you did not request this verification code, please safely ignore this email.",
+            copyrightText: sysSettings.copyright_text,
+          }),
         });
       } catch (emailError) {
         console.error("Error sending OTP email:", emailError);
@@ -543,33 +642,17 @@ export async function POST(req: Request) {
           from: getResendFrom(sysSettings.site_short_name || sysSettings.site_title),
           to: email,
           subject: `🔐 Reset Your ${sysSettings.site_title} Password`,
-          html: `
-            <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f8f6; padding: 40px 15px; text-align: center;">
-              <div style="background: #ffffff; max-width: 480px; margin: 0 auto; padding: 36px 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(7, 56, 62, 0.08); border: 1px solid #e5efe9;">
-                ${getEmailBrandHeader(sysSettings.site_short_name || sysSettings.site_title, sysSettings.site_logo_url)}
-                <h2 style="color: #07383E; font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">Password Reset Request</h2>
-                <p style="color: #38605c; font-size: 15px; line-height: 1.5; margin-bottom: 28px;">
-                  We received a request to reset your ${sysSettings.site_title} password. Use the code below to set a new password.
-                </p>
-                <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #07383E; background: #eef8f2; display: inline-block; padding: 14px 28px; border-radius: 12px; border: 1px solid #66D47E; margin-bottom: 24px;">
-                  ${code}
-                </div>
-                <p style="color: #38605c; font-size: 14px; margin-bottom: 20px;">
-                  This code expires in <strong>15 minutes</strong>.
-                </p>
-                <p style="color: #6a8c88; font-size: 13px; margin-bottom: 0;">
-                  If you didn't request this, you can safely ignore this email.
-                </p>
-                <hr style="border: none; border-top: 1px solid #e8f2ec; margin: 28px 0;" />
-                <p style="font-size: 12px; color: #8aa8a3; margin-bottom: 6px;">
-                  ${sysSettings.copyright_text}
-                </p>
-                <p style="font-size: 12px; color: #8aa8a3; margin: 0;">
-                  Developed and Maintained by CloudWave
-                </p>
-              </div>
-            </div>
-          `,
+          html: buildTransactionalEmailHtml({
+            siteTitle: sysSettings.site_title,
+            siteShortName: sysSettings.site_short_name,
+            logoPath: sysSettings.site_logo_url,
+            heading: "Password Reset Code",
+            description: "We received a request to reset your password. Use the verification code below to proceed with setting your new password.",
+            code,
+            expiresInText: "15 minutes",
+            securityNote: "If you did not request a password reset, you can safely ignore this email. Your account remains secure.",
+            copyrightText: sysSettings.copyright_text,
+          }),
         });
       } catch (emailError) {
         console.error("Error sending password reset email:", emailError);

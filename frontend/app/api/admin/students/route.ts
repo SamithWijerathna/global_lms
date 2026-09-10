@@ -101,12 +101,59 @@ export async function POST(req: Request) {
     await transporter.sendMail({
       from: process.env.SMTP_USER,
       to: user_email,
-      subject: "Complete Your Account Setup",
+      subject: "Complete Your Account Setup - Volit LMS",
       html: `
-        <p>Hello ${first_name} ${last_name},</p>
-        <p>Please complete your account setup:</p>
-        <a href="${setupLink}">Set Up Your Account</a>
-        <p>This link expires in 24 hours.</p>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <title>Complete Your Account Setup</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 40px 16px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;">
+                  <tr>
+                    <td height="4" style="background: linear-gradient(90deg, #0ea5e9 0%, #3b82f6 50%, #6366f1 100%);"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 36px 32px; text-align: center;">
+                      <div style="margin-bottom: 20px;">
+                        <div style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 8px 20px; border-radius: 8px; font-size: 16px; font-weight: 700; text-transform: uppercase;">
+                          Volit LMS System
+                        </div>
+                      </div>
+                      <h1 style="margin: 0 0 12px 0; font-size: 22px; font-weight: 700; color: #0f172a;">Account Setup Invitation</h1>
+                      <p style="margin: 0 0 24px 0; font-size: 15px; color: #475569; line-height: 1.6;">
+                        Hello <strong>${first_name} ${last_name}</strong>,<br/>
+                        You have been registered to the LMS platform. Please click the button below to complete setting up your account:
+                      </p>
+                      <div style="margin: 28px 0;">
+                        <a href="${setupLink}" style="display: inline-block; background-color: #0ea5e9; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                          Set Up Your Account
+                        </a>
+                      </div>
+                      <p style="margin: 0; font-size: 13px; color: #94a3b8;">
+                        This setup link expires in <strong>24 hours</strong>.
+                      </p>
+                      <div style="margin: 28px 0 20px 0; border-top: 1px solid #f1f5f9;"></div>
+                      <div style="text-align: center;">
+                        <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748b; font-weight: 600;">
+                          Volit LMS System
+                        </p>
+                        <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                          Developed and Maintained by Cloudwave (Pvt) Ltd
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `,
     });
 
