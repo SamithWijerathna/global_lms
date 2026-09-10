@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { Info } from "lucide-react";
@@ -23,20 +23,14 @@ export function AppInfoModal({ open, onOpenChange }: AppInfoModalProps) {
         {/* Header with App Icon, Title and Version */}
         <div className="flex items-center gap-3.5 mb-5">
           {/* Volit App Logo Icon */}
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-950/50 border border-white/15">
-            <svg
-              className="w-6 h-6 text-white drop-shadow-sm"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 5l8 15 8-15" />
-              <path d="M12 12l4-7" opacity="0.75" />
-            </svg>
+          <div className="w-12 h-12 rounded-xl bg-white/10 p-1 flex items-center justify-center flex-shrink-0 shadow-lg border border-white/15 overflow-hidden">
+            <img
+              src="/assets/volit-logo.png"
+              alt="Volit Logo"
+              className="w-full h-full object-contain rounded-lg drop-shadow-md"
+            />
           </div>
+
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
