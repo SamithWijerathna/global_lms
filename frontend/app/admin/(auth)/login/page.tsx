@@ -79,7 +79,7 @@ export default function AdminLoginPage() {
 
             <div className="flex items-center justify-between">
               <Checkbox>Remember this device</Checkbox>
-              <Link href="/forgot-password" className="text-sm">
+              <Link href="/admin/forgot-password" className="text-sm">
                 Forgot password?
               </Link>
             </div>

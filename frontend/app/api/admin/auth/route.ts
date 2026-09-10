@@ -4,6 +4,9 @@ import { getDBConnection } from "@/app/api/db";
 import { v4 as uuidv4 } from "uuid";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { resend, getResendFrom, buildTransactionalEmailHtml } from "@/src/lib/emailTemplates";
+import { getSystemSettingsServer } from "@/src/lib/getSystemSettings";
+
 
 async function getCurrentUser(req: Request, db: any) {
   try {
@@ -69,12 +72,33 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const db = await getDBConnection();
-  const formData = await req.formData();
-  const action = formData.get("action") as string;
+
+  const contentType = req.headers.get("content-type") || "";
+  let body: any = {};
+  let formData: FormData | null = null;
+
+  if (contentType.includes("application/json")) {
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+  } else {
+    try {
+      formData = await req.formData();
+      for (const [key, value] of formData.entries()) {
+        body[key] = value;
+      }
+    } catch {
+      formData = null;
+    }
+  }
+
+  const action = (body.action || formData?.get("action") || "") as string;
 
   if (action === "login") {
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const email = (body.email || formData?.get("email") || "") as string;
+    const password = (body.password || formData?.get("password") || "") as string;
 
     if (!email || !password) {
       return NextResponse.json({ error: "Missing credentials" }, { status: 400 });
@@ -153,7 +177,134 @@ export async function POST(req: Request) {
     return res;
   }
 
+  // ✅ Admin Forgot Password - Send OTP
+  if (action === "forgotPassword") {
+    const email = (body.email || formData?.get("email") || "").toString().trim();
+    if (!email) {
+      return NextResponse.json({ error: "Admin email is required" }, { status: 400 });
+    }
+
+    const [admins] = await db.query(
+      "SELECT uuid, first_name, last_name FROM admin_users WHERE user_email = ?",
+      [email]
+    );
+
+    if ((admins as any[]).length === 0) {
+      return NextResponse.json({ error: "No admin account found with this email" }, { status: 404 });
+    }
+
+    // Ensure admin_password_resets table exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS admin_password_resets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        token VARCHAR(10) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await db.query(
+      "INSERT INTO admin_password_resets (email, token, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token = ?, expires_at = ?",
+      [email, code, expires, code, expires]
+    );
+
+    try {
+      const sysSettings = await getSystemSettingsServer();
+      await resend.emails.send({
+        from: getResendFrom(sysSettings.site_short_name || sysSettings.site_title),
+        to: email,
+        subject: `🔐 Reset Your ${sysSettings.site_title} Admin Password`,
+        html: buildTransactionalEmailHtml({
+          siteTitle: sysSettings.site_title,
+          siteShortName: sysSettings.site_short_name,
+          logoPath: sysSettings.site_logo_url,
+          heading: "Admin Password Reset Code",
+          description: "We received a request to reset your LMS administrator account password. Use the verification code below to set a new password.",
+          code,
+          expiresInText: "15 minutes",
+          securityNote: "If you did not request this administrator password reset, please contact your system superuser immediately. Your account remains protected.",
+          copyrightText: sysSettings.copyright_text,
+        }),
+      });
+    } catch (emailError) {
+      console.error("Error sending admin reset email:", emailError);
+      return NextResponse.json({ error: "Failed to send password reset email" }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: "Admin reset code sent to email" });
+  }
+
+  // ✅ Admin Verify OTP
+  if (action === "verifyOtp") {
+    const email = (body.email || formData?.get("email") || "").toString().trim();
+    const otp = (body.otp || body.token || formData?.get("otp") || formData?.get("token") || "").toString().trim();
+
+    if (!email || !otp) {
+      return NextResponse.json({ error: "Email and OTP are required" }, { status: 400 });
+    }
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS admin_password_resets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        token VARCHAR(10) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    const [rows] = await db.query(
+      "SELECT expires_at FROM admin_password_resets WHERE email = ? AND token = ?",
+      [email, otp]
+    );
+
+    if ((rows as any[]).length === 0) {
+      return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
+    }
+
+    const record = (rows as any[])[0];
+    if (new Date(record.expires_at) < new Date()) {
+      return NextResponse.json({ error: "OTP expired" }, { status: 400 });
+    }
+
+    return NextResponse.json({ message: "OTP verified successfully" });
+  }
+
+  // ✅ Admin Reset Password
+  if (action === "resetPassword") {
+    const email = (body.email || formData?.get("email") || "").toString().trim();
+    const token = (body.token || body.otp || formData?.get("token") || formData?.get("otp") || "").toString().trim();
+    const newPassword = (body.newPassword || body.password || formData?.get("newPassword") || formData?.get("password") || "").toString();
+
+    if (!email || !token || !newPassword) {
+      return NextResponse.json({ error: "Email, OTP, and new password are required" }, { status: 400 });
+    }
+
+    const [rows] = await db.query(
+      "SELECT * FROM admin_password_resets WHERE email = ? AND token = ?",
+      [email, token]
+    );
+    const record = (rows as any[])[0];
+    if (!record || new Date(record.expires_at) < new Date()) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await db.query(
+      "UPDATE admin_users SET user_password = ? WHERE user_email = ?",
+      [hashed, email]
+    );
+    await db.query("DELETE FROM admin_password_resets WHERE email = ?", [email]);
+
+    return NextResponse.json({ message: "Admin password reset successfully" });
+  }
+
   const currentUser = await getCurrentUser(req, db);
+
   if (!currentUser) return unauthorizedResponse();
 
   if (action === "updateTheme") {

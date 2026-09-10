@@ -1,217 +1,357 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
+import React, { useState, useEffect } from "react";
+import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import { RadioGroup, Radio } from "@heroui/radio";
+import { InputOtp } from "@heroui/input-otp";
 import { Link } from "@heroui/link";
-import {InputOtp} from "@heroui/input-otp";
+import { useRouter } from "next/navigation";
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
+import { ArrowLeft, CheckCircle2, ShieldCheck, KeyRound, Mail } from "lucide-react";
 
-export default function ForgotPasswordFlow() {
-  const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
+export default function AdminForgotPasswordPage() {
+  const router = useRouter();
+  const { settings } = useSystemSettings();
+
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [email, setEmail] = useState("");
-  const [method, setMethod] = useState("email"); // "email" or "sms"
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [countdown, setCountdown] = useState(0);
 
   // Auto-redirect on success
+  useEffect(() => {
+    if (step === 4) {
+      setCountdown(4);
+    }
+  }, [step]);
+
   useEffect(() => {
     if (step === 4 && countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     } else if (step === 4 && countdown === 0) {
-      window.location.href = "/admin/login"; // Redirect to admin login
+      router.push("/admin/login");
     }
-  }, [step, countdown]);
+  }, [step, countdown, router]);
 
-  const handleSendOTP = (e: React.FormEvent) => {
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setSuccessMessage("");
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep(2);
-      alert(`OTP sent to ${method === "email" ? email : "your phone"}! (Demo: 123456)`);
-    }, 1500);
-  };
 
-  const handleVerifyOTP = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp === "123456") { // Demo OTP
-      setStep(3);
-    } else {
-      alert("Invalid OTP");
+    try {
+      const res = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "forgotPassword",
+          email: email.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to send reset code.");
+        return;
+      }
+
+      setSuccessMessage("Verification code sent to your admin email.");
+      setStep(2);
+    } catch (err) {
+      setError("A network error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert("Passwords do not match");
+    setError("");
+    setSuccessMessage("");
+
+    if (!otp || otp.length < 6) {
+      setError("Please enter the complete 6-digit OTP code.");
       return;
     }
+
     setIsLoading(true);
-    setTimeout(() => {
+
+    try {
+      const res = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verifyOtp",
+          email: email.trim(),
+          otp: otp.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Invalid or expired verification code.");
+        return;
+      }
+
+      setSuccessMessage("Code verified successfully.");
+      setStep(3);
+    } catch (err) {
+      setError("Failed to verify code. Please try again.");
+    } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMessage("");
+
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "resetPassword",
+          email: email.trim(),
+          token: otp.trim(),
+          newPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to reset password.");
+        return;
+      }
+
       setStep(4);
-      setCountdown(5); // 5 seconds redirect
-    }, 1500);
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-800 dark:via-indigo-900 dark:to-black transition-all duration-500">
-      <div className="absolute inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm" />
-      
-      <Card className="relative w-full max-w-md p-8 shadow-2xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border border-gray-200/50 dark:border-white/10">
-        <CardHeader className="flex flex-col items-center pb-8">
-          <h1 className="text-4xl font-bold text-foreground">Forgot Password</h1>
-          <p className="text-default-600 mt-3 text-center">Reset your admin password securely</p>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 via-gray-100 to-slate-200 dark:from-gray-950 dark:via-slate-900 dark:to-gray-900">
+      <div className="absolute inset-0 bg-black/5 dark:bg-black/40 backdrop-blur-[2px] pointer-events-none" />
+
+      <Card className="relative w-full max-w-md p-6 sm:p-8 shadow-2xl bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-gray-800 rounded-2xl">
+        <CardHeader className="flex flex-col items-center pb-6 text-center">
+          <img
+            src={settings.site_logo_url || "/assets/logo.png"}
+            alt={settings.site_title || "Logo"}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/assets/logo.png";
+            }}
+            className="w-16 h-16 object-contain mb-3 drop-shadow-sm"
+          />
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary mb-2">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Admin Portal Security
+          </div>
+
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {step === 1 && "Reset Admin Password"}
+            {step === 2 && "Enter Verification Code"}
+            {step === 3 && "Set New Password"}
+            {step === 4 && "Password Reset Complete"}
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xs">
+            {step === 1 && "Enter your administrator email address to receive a secure reset code."}
+            {step === 2 && `We've sent a 6-digit code to ${email}.`}
+            {step === 3 && "Create a strong new password for your admin account."}
+            {step === 4 && "Your administrator password has been updated securely."}
+          </p>
         </CardHeader>
-        
-        <CardBody className="space-y-6">
+
+        <CardBody className="space-y-4 pt-0">
+          {error && (
+            <div className="p-3 text-xs font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl text-center animate-in fade-in">
+              {error}
+            </div>
+          )}
+
+          {successMessage && step !== 4 && (
+            <div className="p-3 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-xl text-center animate-in fade-in">
+              {successMessage}
+            </div>
+          )}
+
+          {/* STEP 1: Enter Email */}
           {step === 1 && (
-            <form onSubmit={handleSendOTP} className="w-full">
+            <form onSubmit={handleSendOTP} className="space-y-4">
               <Input
                 type="email"
-                label="Admin Email"
+                label="Administrator Email"
+                placeholder="admin@yourdomain.com"
                 value={email}
                 onValueChange={setEmail}
-                placeholder="admin@example.com"
                 isRequired
-                fullWidth
-                className="w-full"
                 variant="bordered"
+                startContent={<Mail className="w-4 h-4 text-gray-400" />}
+                className="w-full"
               />
-              <div className="mt-6">
-                <p className="text-sm font-medium mb-3">Send OTP via:</p>
-                <RadioGroup value={method} onValueChange={setMethod}>
-                  <Radio value="email">Email</Radio>
-                  <Radio value="sms">SMS (Phone)</Radio>
-                </RadioGroup>
-              </div>
-              <Button type="submit" color="primary" size="lg" className="w-full mt-6" isLoading={isLoading}>
-                Send OTP
+
+              <Button
+                type="submit"
+                color="primary"
+                size="lg"
+                className="w-full font-semibold"
+                isLoading={isLoading}
+              >
+                Send Reset Code
               </Button>
             </form>
           )}
 
+          {/* STEP 2: Verify OTP */}
           {step === 2 && (
-            <form onSubmit={handleVerifyOTP} className="flex flex-col justify-center items-center w-full">
-              <p className="text-center text-default-600 mb-6">
-                OTP sent to {method === "email" ? email : "your phone"}
-              </p>
-              <div className="flex justify-center w-full">
-                <InputOtp className="w-full" type="text" label="Enter 6-digit OTP" value={otp}
-                onValueChange={setOtp}  placeholder="123456" isRequired length={6} variant="bordered" />
+            <form onSubmit={handleVerifyOTP} className="space-y-5">
+              <div className="flex flex-col items-center justify-center py-2">
+                <InputOtp
+                  length={6}
+                  value={otp}
+                  onValueChange={setOtp}
+                  isRequired
+                  variant="bordered"
+                  className="font-mono text-lg"
+                />
               </div>
-               
-           
-              <Button type="submit" color="primary" size="lg" className="w-full mt-6">
-                Verify OTP
+
+              <Button
+                type="submit"
+                color="primary"
+                size="lg"
+                className="w-full font-semibold"
+                isLoading={isLoading}
+              >
+                Verify Code
               </Button>
-              <Button variant="light" className="w-full mt-3" onClick={() => setStep(1)}>
-                Back
-              </Button>
+
+              <div className="flex justify-between items-center text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError("");
+                    setStep(1);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium"
+                >
+                  Change Email
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendOTP}
+                  disabled={isLoading}
+                  className="text-primary hover:underline font-semibold"
+                >
+                  Resend Code
+                </button>
+              </div>
             </form>
           )}
 
+          {/* STEP 3: Set New Password */}
           {step === 3 && (
-            <form onSubmit={handleResetPassword} className="w-full">
+            <form onSubmit={handleResetPassword} className="space-y-4">
               <Input
                 type="password"
-                label="New Password"
+                label="New Admin Password"
+                placeholder="••••••••"
                 value={newPassword}
                 onValueChange={setNewPassword}
-                placeholder="••••••••"
                 isRequired
-                fullWidth
-                className="w-full"
                 variant="bordered"
+                startContent={<KeyRound className="w-4 h-4 text-gray-400" />}
               />
+
               <Input
                 type="password"
-                label="Confirm Password"
+                label="Confirm New Password"
+                placeholder="••••••••"
                 value={confirmPassword}
                 onValueChange={setConfirmPassword}
-                placeholder="••••••••"
                 isRequired
-                fullWidth
-                className="w-full mt-4"
                 variant="bordered"
+                startContent={<KeyRound className="w-4 h-4 text-gray-400" />}
               />
-              <Button type="submit" color="primary" size="lg" className="w-full mt-6" isLoading={isLoading}>
-                Reset Password
+
+              <Button
+                type="submit"
+                color="primary"
+                size="lg"
+                className="w-full font-semibold"
+                isLoading={isLoading}
+              >
+                Update Password
               </Button>
             </form>
           )}
 
+          {/* STEP 4: Success & Redirect */}
           {step === 4 && (
-  <div className="text-center py-12 space-y-8">
-    {/* Animated Success Checkmark */}
-    <div className="relative inline-block">
-      <svg width="100" height="100" viewBox="0 0 200 200" className="animate-fadeIn">
-        {/* Circle Stroke (Draw Animation) */}
-        <circle
-          cx="100"
-          cy="100"
-          r="90"
-          fill="none"
-          stroke="#e5e7eb"
-          strokeWidth="12"
-          className="dark:stroke-gray-700"
-        />
-        <circle
-          cx="100"
-          cy="100"
-          r="90"
-          fill="none"
-          stroke="#10b981"
-          strokeWidth="12"
-          strokeDasharray="565"
-          strokeDashoffset="565"
-          strokeLinecap="round"
-          className="animate-drawCircle"
-        />
-        
-        {/* Checkmark (Draw Animation) */}
-        <polyline
-          points="50,100 85,135 150,65"
-          fill="none"
-          stroke="#10b981"
-          strokeWidth="16"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray="200"
-          strokeDashoffset="200"
-          className="animate-drawCheck"
-        />
-      </svg>
-    </div>
+            <div className="flex flex-col items-center justify-center py-4 text-center space-y-4">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-lg">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
 
-    <div className="space-y-4">
-      <h3 className="text-3xl font-bold">Password Changed Successfully!</h3>
-      <p className="text-default-600 max-w-sm mx-auto">
-        Your admin password has been securely updated.<br />
-        Redirecting to login in <span className="font-bold text-primary">{countdown}</span> seconds...
-      </p>
-      <Button as={Link} href="/login" color="primary" size="lg" className="mt-6">
-        Go to Login Now
-      </Button>
-    </div>
-  </div>
-)}
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Password Updated!
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Redirecting to admin login in {countdown} seconds...
+                </p>
+              </div>
+
+              <Button
+                color="primary"
+                onClick={() => router.push("/admin/login")}
+                className="w-full font-semibold"
+              >
+                Go to Admin Login Now
+              </Button>
+            </div>
+          )}
+
+          {/* Back to Login Link */}
+          {step !== 4 && (
+            <div className="pt-2 text-center">
+              <Link
+                href="/admin/login"
+                className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back to Admin Login
+              </Link>
+            </div>
+          )}
         </CardBody>
-        
-        {step < 4 && (
-          <CardFooter className="text-center text-sm">
-            <Link href="/login" className="text-primary hover:underline">
-              ← Back to Login
-            </Link>
-          </CardFooter>
-        )}
       </Card>
     </div>
   );
