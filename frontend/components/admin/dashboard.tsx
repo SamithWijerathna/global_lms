@@ -20,6 +20,8 @@ import { useSystemSettings } from "@/src/lib/useSystemSettings";
 interface DashboardData {
   classes: number;
   users: number;
+  new_this_month?: number;
+  monthlyEnrollments?: Array<{ month: string; enrollments: number }>;
   payments: {
     total: number;
     pending: number;
@@ -41,7 +43,6 @@ interface DashboardData {
     created_at: string;
   }>;
   pendingPayments: Array<{
-    
     student_name: string;
     student_id: string;
     class_title: string;
@@ -50,15 +51,6 @@ interface DashboardData {
     transaction_proof: string;
   }>;
 }
-
-const chartData = [
-  { month: "Jan", enrollments: 0 }, { month: "Feb", enrollments: 0 },
-  { month: "Mar", enrollments: 0 }, { month: "Apr", enrollments: 0 },
-  { month: "May", enrollments: 0 }, { month: "Jun", enrollments: 0 },
-  { month: "Jul", enrollments: 0 }, { month: "Aug", enrollments: 0 },
-  { month: "Sep", enrollments: 0 }, { month: "Oct", enrollments: 0 },
-  { month: "Nov", enrollments: 21 }, { month: "Dec", enrollments: 0 },
-];
 
 export default function DashboardHome() {
   const { settings } = useSystemSettings();
@@ -137,7 +129,11 @@ export default function DashboardHome() {
             <CardHeader className="text-sm font-semibold text-default-600">Total Students</CardHeader>
             <CardBody>
               {loading ? <Skeleton className="h-12 w-24 rounded" /> : <p className="text-4xl font-bold text-primary">{data?.users ?? 0}</p>}
-              <p className="text-sm text-success mt-3">Total registered students</p>
+              <p className="text-sm text-success mt-3">
+                {data?.new_this_month && data.new_this_month > 0
+                  ? `+${data.new_this_month} new this month`
+                  : "Total registered students"}
+              </p>
             </CardBody>
           </Card>
 
@@ -175,7 +171,8 @@ export default function DashboardHome() {
                 <Skeleton className="h-96 w-full rounded" />
               ) : (
                 <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={chartData}>
+                  <LineChart data={data?.monthlyEnrollments || []}>
+
                     <CartesianGrid strokeDasharray="4 4" />
                     <XAxis dataKey="month" />
                     <YAxis />

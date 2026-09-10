@@ -40,6 +40,35 @@ export async function GET(req: Request) {
       "SELECT SUM(amount) AS approved_total FROM payments WHERE status = 'approved'"
     );
 
+    /* ---------------- REAL MONTHLY ENROLLMENTS ---------------- */
+    const currentYear = new Date().getFullYear();
+    const [enrollmentRows] = await db.query<any[]>(
+      `SELECT 
+         MONTH(create_at) AS month_num, 
+         COUNT(*) AS count 
+       FROM users 
+       WHERE YEAR(create_at) = ? 
+       GROUP BY MONTH(create_at)`,
+      [currentYear]
+    );
+
+    const [[newStudentsRow]] = await db.query<any[]>(
+      `SELECT COUNT(*) AS new_this_month 
+       FROM users 
+       WHERE YEAR(create_at) = YEAR(CURDATE()) AND MONTH(create_at) = MONTH(CURDATE())`
+    );
+    const newThisMonth = Number(newStudentsRow?.new_this_month || 0);
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlyEnrollments = monthNames.map((name, index) => {
+      const match = (enrollmentRows as any[])?.find((r) => Number(r.month_num) === index + 1);
+      return {
+        month: name,
+        enrollments: match ? Number(match.count) : 0,
+      };
+    });
+
+
     /* ---------------- RECENT DATA ---------------- */
     const [recentUsers] = await db.query(
       `SELECT 
@@ -113,6 +142,8 @@ export async function GET(req: Request) {
       },
       classes,
       users,
+      new_this_month: newThisMonth,
+      monthlyEnrollments,
       payments: {
         total,
         pending,
