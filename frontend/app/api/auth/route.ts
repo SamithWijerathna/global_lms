@@ -11,12 +11,51 @@ import jwt from "jsonwebtoken";
 import { getSystemSettingsServer } from "@/src/lib/getSystemSettings";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_1234567890abcdef");
-const getResendFrom = (name?: string) => process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM || `${name || "Volit"} <noreply@test.cloudwave.asia>`;
-const getAppLogoUrl = (logoPath?: string) => {
-  if (logoPath && logoPath.startsWith("http")) return logoPath;
-  const baseUrl = process.env.APP_URL || "https://volit.lk";
-  return `${baseUrl.replace(/\/$/, "")}${logoPath || "/assets/logo.png"}`;
+
+const getResendFrom = (name?: string) => {
+  const envFrom = process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM;
+  if (envFrom) {
+    const match = envFrom.match(/<([^>]+)>/);
+    const emailOnly = match ? match[1].trim() : envFrom.trim();
+    const cleanName = (name || envFrom.replace(/<[^>]+>/, "").replace(/["']/g, "").trim() || "LMS Platform").replace(/["']/g, "");
+    return `"${cleanName}" <${emailOnly}>`;
+  }
+  return `"${name || "LMS Platform"}" <noreply@test.cloudwave.asia>`;
 };
+
+const getEmailBrandHeader = (siteTitle: string, logoPath?: string) => {
+  const envFrom = process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM || "";
+  const domainMatch = envFrom.match(/@([^>]+)/);
+  const sendingDomain = domainMatch ? domainMatch[1].trim().toLowerCase() : "";
+
+  // Check if logo is fully qualified and matches the sending domain or its subdomain
+  let isAligned = false;
+  if (logoPath && logoPath.startsWith("http") && sendingDomain) {
+    try {
+      const parsed = new URL(logoPath);
+      const host = parsed.hostname.toLowerCase();
+      if (host === sendingDomain || host.endsWith(`.${sendingDomain}`)) {
+        isAligned = true;
+      }
+    } catch {
+      isAligned = false;
+    }
+  }
+
+  if (isAligned && logoPath) {
+    return `<div style="margin-bottom: 24px; text-align: center;">
+      <img src="${logoPath}" alt="${siteTitle}" style="max-height: 52px; width: auto; display: inline-block;" />
+    </div>`;
+  }
+
+  // High-deliverability CSS badge that renders reliably across all email clients without triggering cross-domain warnings
+  return `<div style="margin-bottom: 24px; text-align: center;">
+    <div style="display: inline-block; background: #07383E; color: #ffffff; padding: 10px 24px; border-radius: 10px; font-size: 20px; font-weight: 800; letter-spacing: -0.3px; text-transform: uppercase;">
+      ${siteTitle}
+    </div>
+  </div>`;
+};
+
 
 // ==================== GET - Fetch user(s) ====================
 export async function GET(req: Request) {
@@ -244,9 +283,7 @@ export async function POST(req: Request) {
           html: `
             <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f8f6; padding: 40px 15px; text-align: center;">
               <div style="background: #ffffff; max-width: 480px; margin: 0 auto; padding: 36px 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(7, 56, 62, 0.08); border: 1px solid #e5efe9;">
-                <div style="margin-bottom: 24px;">
-                  <img src="${getAppLogoUrl(sysSettings.site_logo_url)}" alt="${sysSettings.site_title}" style="max-height: 52px; width: auto; display: inline-block;" />
-                </div>
+                ${getEmailBrandHeader(sysSettings.site_short_name || sysSettings.site_title, sysSettings.site_logo_url)}
                 <h2 style="color: #07383E; font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">${sysSettings.site_title} Verification</h2>
                 <p style="color: #38605c; font-size: 15px; line-height: 1.5; margin-bottom: 28px;">
                   Use the following One-Time Password (OTP) to verify your account. This code will expire in <b>10 minutes</b>.
@@ -262,7 +299,7 @@ export async function POST(req: Request) {
                   ${sysSettings.copyright_text}
                 </p>
                 <p style="font-size: 12px; color: #8aa8a3; margin: 0;">
-                  Developed and Maintained by <a href="https://cloudwave.asia" target="_blank" style="color: #07383E; text-decoration: none; font-weight: 600;">CloudWave.asia</a>
+                  Developed and Maintained by CloudWave
                 </p>
               </div>
             </div>
@@ -509,9 +546,7 @@ export async function POST(req: Request) {
           html: `
             <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f8f6; padding: 40px 15px; text-align: center;">
               <div style="background: #ffffff; max-width: 480px; margin: 0 auto; padding: 36px 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(7, 56, 62, 0.08); border: 1px solid #e5efe9;">
-                <div style="margin-bottom: 24px;">
-                  <img src="${getAppLogoUrl(sysSettings.site_logo_url)}" alt="${sysSettings.site_title}" style="max-height: 52px; width: auto; display: inline-block;" />
-                </div>
+                ${getEmailBrandHeader(sysSettings.site_short_name || sysSettings.site_title, sysSettings.site_logo_url)}
                 <h2 style="color: #07383E; font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">Password Reset Request</h2>
                 <p style="color: #38605c; font-size: 15px; line-height: 1.5; margin-bottom: 28px;">
                   We received a request to reset your ${sysSettings.site_title} password. Use the code below to set a new password.
@@ -530,7 +565,7 @@ export async function POST(req: Request) {
                   ${sysSettings.copyright_text}
                 </p>
                 <p style="font-size: 12px; color: #8aa8a3; margin: 0;">
-                  Developed and Maintained by <a href="https://cloudwave.asia" target="_blank" style="color: #07383E; text-decoration: none; font-weight: 600;">CloudWave.asia</a>
+                  Developed and Maintained by CloudWave
                 </p>
               </div>
             </div>
