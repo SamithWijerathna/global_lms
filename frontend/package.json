@@ -58,6 +58,7 @@
     "@heroui/tooltip": "2.2.26",
     "@heroui/user": "2.2.24",
     "@iconify/react": "^6.0.2",
+    "@radix-ui/react-dialog": "^1.1.23",
     "@react-aria/ssr": "3.9.10",
     "@react-aria/visually-hidden": "3.8.29",
     "bcrypt": "^6.0.0",

@@ -57,6 +57,8 @@ const quizzesManagerItems = [
 
 import { useEffect } from "react";
 import { useSystemSettings } from "@/src/lib/useSystemSettings";
+import { AppInfoButton } from "@/components/AppInfoModal";
+
 
 export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobileOpen?: (open: boolean) => void }) {
   const { settings } = useSystemSettings();
@@ -215,7 +217,18 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; s
               Settings
             </span>
           </Link>
+
+          <div className="px-2 mt-1">
+            <AppInfoButton collapsed={!showMobile && collapsed} />
+            {(!collapsed || showMobile) && (
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 text-center select-none pt-1 pb-0.5 tracking-tight font-medium">
+                Powered by <span className="font-semibold text-gray-800 dark:text-gray-200">CircleOne</span>
+              </div>
+            )}
+          </div>
+
           <div className="my-3 mx-6 border-t border-gray-200 dark:border-gray-700"></div>
+
           <div className="flex justify-center">
             <button
               onClick={() => {

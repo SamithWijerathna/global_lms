@@ -54,6 +54,8 @@ const settingsItems = [
 ];
 
 import { useSystemSettings } from "@/src/lib/useSystemSettings";
+import { AppInfoButton } from "@/components/AppInfoModal";
+
 
 function BrandHeader() {
   const { state } = useAnimatedSidebar();
@@ -162,6 +164,23 @@ function UserAccountFooter() {
   );
 }
 
+function SidebarFooterContent() {
+  const { state } = useAnimatedSidebar();
+  const collapsed = state === "collapsed";
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <AppInfoButton collapsed={collapsed} />
+      {!collapsed && (
+        <div className="text-[11px] text-muted-foreground/80 dark:text-zinc-500 text-center select-none py-0.5 tracking-tight font-medium">
+          Powered by <span className="font-semibold text-foreground/90 dark:text-zinc-300">CircleOne</span>
+        </div>
+      )}
+      <UserAccountFooter />
+    </div>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
 
@@ -218,9 +237,9 @@ export function Sidebar() {
       </AnimatedSidebarContent>
 
       <AnimatedSidebarFooter>
-        <UserAccountFooter />
+        <SidebarFooterContent />
       </AnimatedSidebarFooter>
       <AnimatedSidebarRail />
     </AnimatedSidebar>
   );
-}
+}
