@@ -15,13 +15,13 @@ export interface SystemSettings {
 }
 
 const defaultSettings: SystemSettings = {
-  site_title: "Volit LMS",
-  site_short_name: "Volit",
+  site_title: "LMS Platform",
+  site_short_name: "LMS",
   site_logo_url: "/assets/logo.png",
   site_favicon_url: "/assets/logo-icon.png",
-  copyright_text: "© 2026 Volit. All rights reserved.",
-  contact_email: "support@volit.lk",
-  contact_phone: "+94 77 123 4567",
+  copyright_text: "© 2026 LMS Platform. All rights reserved.",
+  contact_email: "support@lms.lk",
+  contact_phone: "",
 };
 
 interface SystemSettingsContextType {
@@ -37,7 +37,17 @@ const SystemSettingsContext = createContext<SystemSettingsContextType>({
 });
 
 export function SystemSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<SystemSettings>(defaultSettings);
+  const [settings, setSettings] = useState<SystemSettings>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("lms_system_settings");
+        if (cached) {
+          return { ...defaultSettings, ...JSON.parse(cached) };
+        }
+      } catch (e) {}
+    }
+    return defaultSettings;
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = async () => {
@@ -46,10 +56,16 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data && typeof data === "object") {
-          setSettings((prev) => ({
-            ...prev,
-            ...data,
-          }));
+          setSettings((prev) => {
+            const next = {
+              ...prev,
+              ...data,
+            };
+            try {
+              localStorage.setItem("lms_system_settings", JSON.stringify(next));
+            } catch (e) {}
+            return next;
+          });
         }
       }
     } catch (err) {

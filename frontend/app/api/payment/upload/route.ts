@@ -10,12 +10,27 @@ import path from "path";
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const session = await getIronSession(cookieStore, sessionOptions);
-   
-    const classId = session.selectedClassId;
-    const studypackId = session.selectedStudypackId;
-    const itemId = classId || studypackId;
+    const formData = await req.formData();
+    const file = formData.get("receipt") as File;
+    const bank = formData.get("bank");
+    const payment_type = formData.get("payment_type");
+    const student_uuid = formData.get("student_uuid");
+    const amount = formData.get("amount");
+
+    // Support item_id / class_id / studypack_id directly from formData or fallback to session
+    const formItemId = (formData.get("item_id") || formData.get("class_id") || formData.get("studypack_id")) as string | null;
+    let itemId = formItemId;
+
+    let session: any = null;
+    try {
+      const cookieStore = await cookies();
+      session = await getIronSession(cookieStore, sessionOptions);
+      if (!itemId) {
+        itemId = session.selectedClassId || session.selectedStudypackId;
+      }
+    } catch (sessionErr) {
+      console.warn("Session read warning in /api/payment/upload:", sessionErr);
+    }
     
     if (!itemId) {
       return NextResponse.json(
@@ -24,15 +39,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const itemType = itemId.startsWith("CL") ? "class" : "studypack";
+    const itemIdStr = String(itemId);
+    const itemType = itemIdStr.startsWith("CL") ? "class" : itemIdStr.startsWith("ST") ? "studypack" : ((payment_type as string) || "class");
     
     const receipt_id = uuidv4();
-    const formData = await req.formData();
-    const file = formData.get("receipt") as File;
-    const bank = formData.get("bank");
-    const payment_type = formData.get("payment_type");
-    const student_uuid = formData.get("student_uuid");
-    const amount = formData.get("amount");
 
     if (!file) {
       return NextResponse.json(
@@ -75,7 +85,7 @@ export async function POST(req: Request) {
         receipt_id,
         student_uuid,
         amount,
-        itemId,
+        itemIdStr,
         bank,
         saveResult.relativeUrl,
         itemType,
@@ -83,14 +93,20 @@ export async function POST(req: Request) {
       ]
     );
 
-    session.receipt_id = receipt_id;
-    await session.save();
+    if (session) {
+      try {
+        session.receipt_id = receipt_id;
+        await session.save();
+      } catch (saveErr) {
+        console.warn("Session save warning in /api/payment/upload:", saveErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
       receipt_id: receipt_id,
       item_type: itemType,
-      item_id: itemId,
+      item_id: itemIdStr,
     });
   } catch (error) {
     console.error("Upload error:", error);

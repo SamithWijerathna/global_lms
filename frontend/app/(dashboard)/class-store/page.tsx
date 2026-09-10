@@ -154,11 +154,15 @@ export default function LessonStorePage() {
 
     setUploading(true);
 
+    const classId = selectedClass.class_id || selectedClass.id;
+
     const formData = new FormData();
     formData.append("receipt", file);
     formData.append("bank", bankChoice);
     formData.append("student_uuid", user.uuid);
     formData.append("payment_type", "class");
+    formData.append("item_id", classId.toString());
+    formData.append("class_id", classId.toString());
     formData.append("amount", selectedClass.class_price.toString());
 
     try {
@@ -195,23 +199,18 @@ export default function LessonStorePage() {
     }
 
     try {
-      const res = await fetch("/api/payment/select", {
+      await fetch("/api/payment/select", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ class_id: classId }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Failed to select class for payment");
-        return;
-      }
-
-      setSelectedClass(cls);
-      resetPaymentStates();
-      setIsPaymentModalOpen(true);
     } catch (err) {
-      alert("An error occurred while selecting the class.");
+      console.warn("Could not save class selection in session:", err);
     }
+
+    setSelectedClass(cls);
+    resetPaymentStates();
+    setIsPaymentModalOpen(true);
   };
 
   const handleModalClose = (open: boolean) => {

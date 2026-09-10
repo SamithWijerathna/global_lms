@@ -602,22 +602,17 @@ export default function QuickAccessPage() {
       return;
     }
     try {
-      const res = await fetch("/api/payment/select", {
+      await fetch("/api/payment/select", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ class_id: cls.class_id }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Failed to start renewal");
-        return;
-      }
-      setPaymentClass(cls);
-      resetPaymentStates();
-      setIsPaymentModalOpen(true);
     } catch (err) {
-      alert("An error occurred while starting renewal.");
+      console.warn("Could not save renewal selection in session:", err);
     }
+    setPaymentClass(cls);
+    resetPaymentStates();
+    setIsPaymentModalOpen(true);
   };
 
   const resetPaymentStates = () => {
@@ -642,6 +637,8 @@ export default function QuickAccessPage() {
     formData.append("bank", bankChoice);
     formData.append("student_uuid", user.uuid);
     formData.append("payment_type", "class");
+    formData.append("item_id", paymentClass.class_id);
+    formData.append("class_id", paymentClass.class_id);
     formData.append("amount", paymentClass.class_price.toString());
     try {
       const res = await fetch("/api/payment/upload", {

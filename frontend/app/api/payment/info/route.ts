@@ -1,24 +1,25 @@
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
-import { sessionOptions } from "@/src/lib/session";
+import { sessionOptions } from "@/lib/session";
 import { getDBConnection } from "../../../api/db";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const session = await getIronSession(cookieStore, sessionOptions);
-  
-  const itemId = session.selectedClassId || session.selectedStudypackId;
-  
-  if (!itemId) {
-    return new Response(JSON.stringify({ error: "No class or study pack selected" }), {
-      status: 400,
-    });
-  }
-
   try {
+    const cookieStore = await cookies();
+    const session = await getIronSession(cookieStore, sessionOptions);
+    
+    const itemId = session.selectedClassId || session.selectedStudypackId;
+    
+    if (!itemId) {
+      return new Response(JSON.stringify({ error: "No class or study pack selected" }), {
+        status: 400,
+      });
+    }
+
+    const itemIdStr = String(itemId);
     const db = await getDBConnection();
-    const isClass = itemId.startsWith("CL");
-    const isStudyPack = itemId.startsWith("ST");
+    const isClass = itemIdStr.startsWith("CL");
+    const isStudyPack = itemIdStr.startsWith("ST");
 
     if (!isClass && !isStudyPack) {
       return new Response(JSON.stringify({ error: "Invalid item ID format" }), {

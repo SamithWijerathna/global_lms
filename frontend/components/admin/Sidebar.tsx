@@ -61,7 +61,7 @@ import { useSystemSettings } from "@/src/lib/useSystemSettings";
 export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobileOpen?: (open: boolean) => void }) {
   const { settings } = useSystemSettings();
   const logoUrl = settings.site_logo_url || "/assets/logo.png";
-  const title = settings.site_title || "Volit LMS";
+  const title = settings.site_title || "LMS Platform";
 
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(() => {

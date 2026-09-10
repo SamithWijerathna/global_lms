@@ -12,13 +12,13 @@ export interface SystemSettings {
 }
 
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
-  site_title: "Volit LMS",
-  site_short_name: "Volit",
+  site_title: "LMS Platform",
+  site_short_name: "LMS",
   site_logo_url: "/assets/logo.png",
   site_favicon_url: "/assets/logo-icon.png",
-  copyright_text: "© 2026 Volit. All rights reserved.",
-  contact_email: "support@volit.lk",
-  contact_phone: "+94 77 123 4567",
+  copyright_text: "© 2026 LMS Platform. All rights reserved.",
+  contact_email: "support@lms.lk",
+  contact_phone: "",
 };
 
 export async function getSystemSettingsServer(): Promise<SystemSettings> {

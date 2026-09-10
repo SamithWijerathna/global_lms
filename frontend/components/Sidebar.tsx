@@ -60,7 +60,7 @@ function BrandHeader() {
   const { settings } = useSystemSettings();
   const collapsed = state === "collapsed";
   const logoUrl = settings.site_logo_url || "/assets/logo.png";
-  const title = settings.site_title || "Volit LMS";
+  const title = settings.site_title || "LMS Platform";
 
   return (
     <div className="flex items-center gap-2 px-2 py-1">

@@ -5,20 +5,20 @@ import path from "path";
 
 export async function GET(req: Request) {
   const defaultSettings: Record<string, string> = {
-    site_title: "Volit LMS",
-    site_short_name: "Volit",
+    site_title: "LMS Platform",
+    site_short_name: "LMS",
     site_logo_url: "/assets/logo.png",
     site_favicon_url: "/assets/logo-icon.png",
-    copyright_text: "© 2026 Volit. All rights reserved.",
-    contact_email: "support@volit.lk",
-    contact_phone: "+94 77 123 4567",
+    copyright_text: "© 2026 LMS Platform. All rights reserved.",
+    contact_email: "support@lms.lk",
+    contact_phone: "",
   };
 
   try {
     const { searchParams } = new URL(req.url);
     const key = searchParams.get("key");
 
-    const db = await getDBConnection();
+    const db = await getDBConnection(req);
 
     if (key) {
       const [rows]: any = await db.query(
@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const db = await getDBConnection();
+    const db = await getDBConnection(req);
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("multipart/form-data")) {

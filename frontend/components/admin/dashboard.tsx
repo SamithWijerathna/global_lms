@@ -1,13 +1,10 @@
 "use client";
-import { siteConfig } from "@/config/site";
-export const metadata = {
-  title: `Dashboard - ${siteConfig.name}`,
-};
-import { Card, CardHeader, CardBody } from "@heroui/card"; // Assuming Skeleton from same UI lib
+
+import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
 import { Chip } from "@heroui/chip";
 import { Progress, CircularProgress } from "@heroui/progress";
-import {Skeleton} from "@heroui/skeleton";
+import { Skeleton } from "@heroui/skeleton";
 import {
   LineChart,
   Line,
@@ -18,6 +15,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useEffect, useState } from "react";
+import { useSystemSettings } from "@/src/lib/useSystemSettings";
 
 interface DashboardData {
   classes: number;
@@ -63,6 +61,7 @@ const chartData = [
 ];
 
 export default function DashboardHome() {
+  const { settings } = useSystemSettings();
   const [data, setData] = useState<DashboardData | null>(null);
   const [progressValue, setProgressValue] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -119,9 +118,7 @@ export default function DashboardHome() {
       });
   }, []);
 
-
-
-
+  const academyName = settings?.site_short_name || settings?.site_title || "academy";
 
   return (
     <div className="min-h-screen p-2 sm:p-4 md:p-8">
@@ -130,7 +127,7 @@ export default function DashboardHome() {
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-foreground">Dashboard Overview</h1>
           <p className="text-lg text-default-600 mt-3">
-            Monitor your driving school performance, enrollments, and finances.
+            Monitor your {academyName} performance, enrollments, and finances.
           </p>
         </div>
 
@@ -140,7 +137,7 @@ export default function DashboardHome() {
             <CardHeader className="text-sm font-semibold text-default-600">Total Students</CardHeader>
             <CardBody>
               {loading ? <Skeleton className="h-12 w-24 rounded" /> : <p className="text-4xl font-bold text-primary">{data?.users ?? 0}</p>}
-              <p className="text-sm text-success mt-3">+21 enrollments in November</p>
+              <p className="text-sm text-success mt-3">Total registered students</p>
             </CardBody>
           </Card>
 
@@ -148,7 +145,7 @@ export default function DashboardHome() {
             <CardHeader className="text-sm font-semibold text-default-600">Active Classes</CardHeader>
             <CardBody>
               {loading ? <Skeleton className="h-12 w-16 rounded" /> : <p className="text-4xl font-bold text-primary">{data?.classes ?? 0}</p>}
-              <p className="text-sm text-default-500 mt-3">2027 Theory Physical (Nov batch)</p>
+              <p className="text-sm text-default-500 mt-3">All active courses & batches</p>
             </CardBody>
           </Card>
 
@@ -172,7 +169,7 @@ export default function DashboardHome() {
         {/* Chart + Storage */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-8 mb-8 sm:mb-12">
           <Card className="lg:col-span-2 shadow-lg">
-            <CardHeader className="text-xl font-semibold">Enrollment Trends (2025)</CardHeader>
+            <CardHeader className="text-xl font-semibold">Enrollment Trends ({new Date().getFullYear()})</CardHeader>
             <CardBody>
               {loading ? (
                 <Skeleton className="h-96 w-full rounded" />

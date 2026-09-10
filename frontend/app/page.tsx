@@ -48,7 +48,7 @@ export default function LoadingScreen() {
       <div className="relative z-10 flex flex-col items-center">
         <img
           src={settings.site_logo_url || "/assets/logo.png"}
-          alt={settings.site_title || "Volit LMS"}
+          alt={settings.site_title || "LMS Platform"}
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/assets/logo.png";
           }}

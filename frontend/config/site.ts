@@ -1,8 +1,8 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
-  name: "Volit",
-  description: "Volit LMS Platform.",
+  name: "LMS Platform",
+  description: "Cloudwave LMS Platform.",
   navItems: [
     {
       label: "Home",
