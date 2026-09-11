@@ -82,7 +82,8 @@ const isValidSLPhone = (phone: string) =>
 
 export default function Signup() {
   const router = useRouter();
-  const { settings } = useSystemSettings();
+  const { settings, refetchSettings } = useSystemSettings();
+  const [domainName, setDomainName] = React.useState("");
   const [step, setStep] = React.useState(1);
   const [otp, setOtp] = React.useState("");
   const [profilePreview, setProfilePreview] = React.useState<string | null>(null);
@@ -91,6 +92,18 @@ export default function Signup() {
   const [successMessage, setSuccessMessage] = React.useState("");
   const [isAgreed, setIsAgreed] = React.useState(false);
   const [batchesList, setBatchesList] = React.useState<Array<{ value: string; label: string }>>([]);
+
+  React.useEffect(() => {
+    refetchSettings();
+    if (typeof window !== "undefined") {
+      setDomainName(window.location.hostname);
+    }
+  }, []);
+
+  const businessName = settings.site_title || settings.site_short_name || "LMS Platform";
+  const displayDomain = domainName || (typeof window !== "undefined" ? window.location.hostname : "") || settings.site_short_name || "lms.lk";
+  const supportEmail = settings.contact_email || (displayDomain ? `support@${displayDomain.replace(/^app\./, "")}` : "support@lms.lk");
+  const currentYear = new Date().getFullYear();
 
   React.useEffect(() => {
     fetch("/api/batches")
@@ -282,16 +295,28 @@ export default function Signup() {
 
   return (
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-gradient-animate">
+      {/* Bloom gradients */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full bg-purple-500/30 blur-3xl animate-bloom" />
+        <div className="absolute bottom-0 right-0 h-[600px] w-[600px] rounded-full bg-fuchsia-500/20 blur-3xl animate-bloom-delayed" />
+      </div>
+
       <div className="rounded-large bg-content1 shadow-small w-full max-w-xl px-8 py-8 items-center flex flex-col relative z-10">
         <img
+          key={settings.site_logo_url || "signup-logo"}
           src={settings.site_logo_url || "/assets/logo.png"}
           alt={settings.site_title || "Logo"}
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/assets/logo.png";
           }}
-          className="w-44 h-auto max-h-28 sm:w-56 sm:max-h-36 object-contain mb-3 mx-auto filter dark:brightness-0 dark:invert transition-all drop-shadow-md"
+          className="w-44 h-auto max-h-28 sm:w-56 sm:max-h-36 object-contain mb-2 mx-auto filter dark:brightness-0 dark:invert transition-all drop-shadow-md"
         />
-        <h1 className="text-3xl font-semibold mb-4 text-center">Create Account</h1>
+        <div className="flex flex-col gap-1 text-center w-full mb-4">
+          <h1 className="text-2xl font-semibold">Create Account</h1>
+          <p className="text-small text-default-500">
+            to continue to {settings.site_short_name || settings.site_title || "LMS"}
+          </p>
+        </div>
 
         {error && (
           <div className="w-full bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm mb-4">
@@ -542,14 +567,14 @@ export default function Signup() {
     {(onClose) => (
       <>
         <ModalHeader className="flex flex-col gap-1">
-          Terms of Service – volit.lk
+          Terms of Service – {businessName} ({displayDomain})
         </ModalHeader>
         <ModalBody className="text-sm space-y-4">
 
-          <p><strong>Effective Date:</strong> 2026/3/1</p>
+          <p><strong>Effective Date:</strong> {currentYear}/1/1</p>
 
           <p>
-            By creating an account or using volit.lk, you agree to the following terms.
+            By creating an account or using {displayDomain}, you agree to the following terms established by {businessName}.
           </p>
 
           <div>
@@ -582,7 +607,7 @@ export default function Signup() {
           <div>
             <h4 className="font-semibold">4. Verification</h4>
             <p>
-              Email OTP verification is required. volit.lk reserves the right
+              Email OTP verification is required. {businessName} reserves the right
               to reject or suspend accounts that fail verification.
             </p>
           </div>
@@ -590,7 +615,7 @@ export default function Signup() {
           <div>
             <h4 className="font-semibold">5. Intellectual Property</h4>
             <p>
-              All platform content and branding belong to volit.lk and may not
+              All platform content and branding belong to {businessName} and may not
               be copied or redistributed without permission.
             </p>
           </div>
@@ -636,15 +661,15 @@ export default function Signup() {
     {(onClose) => (
       <>
         <ModalHeader className="flex flex-col gap-1">
-          Privacy Policy – volit.lk
+          Privacy Policy – {businessName} ({displayDomain})
         </ModalHeader>
         <ModalBody className="text-sm space-y-4">
 
-          <p><strong>Effective Date:</strong> 2026/3/1</p>
+          <p><strong>Effective Date:</strong> {currentYear}/1/1</p>
 
           <p>
-            volit.lk values your privacy. This policy explains how we collect,
-            use, and protect your information.
+            {businessName} values your privacy. This policy explains how we collect,
+            use, and protect your information on {displayDomain}.
           </p>
 
           <div>
@@ -691,7 +716,10 @@ export default function Signup() {
             <h4 className="font-semibold">5. Your Rights</h4>
             <p>
               You may request access, correction, or deletion of your data by
-              contacting our official support email.
+              contacting our official support email at{" "}
+              <a href={`mailto:${supportEmail}`} className="text-primary underline font-medium">
+                {supportEmail}
+              </a>.
             </p>
           </div>
 

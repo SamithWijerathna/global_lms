@@ -4,7 +4,7 @@ import { healDatabase } from "../dbHealer";
 
 export async function GET(req: Request) {
   try {
-    const db = await getDBConnection();
+    const db = await getDBConnection(req);
     await healDatabase(db);
 
     const { searchParams } = new URL(req.url);

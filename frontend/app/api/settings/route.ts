@@ -3,6 +3,8 @@ import { getDBConnection } from "../db";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   const defaultSettings: Record<string, string> = {
     site_title: "LMS Platform",
