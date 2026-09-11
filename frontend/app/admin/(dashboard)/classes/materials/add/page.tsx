@@ -125,6 +125,10 @@ export default function AddMaterialPage() {
     }
     if (type === "pdf") setPdfFile(file);
     if (type === "image") {
+      if (file && file.size > 8 * 1024 * 1024) {
+        alert("Cover image exceeds 8MB limit. Please choose an image under 8MB.");
+        return;
+      }
       setImageFile(file);
       if (file) setImagePreview(URL.createObjectURL(file));
     }
@@ -473,13 +477,19 @@ export default function AddMaterialPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2">Cover Image (Recommended)</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium">Cover Image (Recommended)</label>
+                <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">Max 8MB • Auto WebP</span>
+              </div>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFileChange("image", e.target.files?.[0] || null)}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer"
               />
+              <p className="text-xs text-default-400 mt-1.5">
+                Supported: JPG, PNG, WebP (Compressed to 1-3MB to optimize storage)
+              </p>
             </div>
 
             {loadingClasses ? (

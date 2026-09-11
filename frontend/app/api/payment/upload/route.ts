@@ -51,6 +51,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (file.size > 8 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: "Receipt file size exceeds the 8MB limit. Please upload a smaller file." },
+        { status: 400 }
+      );
+    }
+
     if (!bank || !student_uuid || !amount) {
       return NextResponse.json(
         { error: "Missing required fields" },

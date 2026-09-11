@@ -662,18 +662,26 @@ function SettingsContent() {
                 <div className="flex flex-col items-center">
                   <Avatar src={avatarSrc} name={`${user.first_name} ${user.last_name}`} size="lg" className="w-32 h-32" />
                   {isEditingProfile && (
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="mt-4"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setPhotoFile(file);
-                          setPhotoPreview(URL.createObjectURL(file));
-                        }
-                      }}
-                    />
+                    <div className="flex flex-col items-center mt-4">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="text-xs text-default-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 8 * 1024 * 1024) {
+                              alert("Profile photo exceeds 8MB limit. Please choose an image under 8MB.");
+                              e.target.value = "";
+                              return;
+                            }
+                            setPhotoFile(file);
+                            setPhotoPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-default-400 mt-1.5">Max 8MB • Auto WebP (Compressed to 1-3MB)</p>
+                    </div>
                   )}
                 </div>
 
@@ -815,9 +823,12 @@ function SettingsContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 rounded-xl border border-default-200 dark:border-default-100 bg-default-50/50">
                     {/* Site Logo */}
                     <div className="space-y-3">
-                      <label className="block text-sm font-semibold text-foreground">
-                        Site Brand Logo
-                      </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-semibold text-foreground">
+                          Site Logo
+                        </label>
+                        <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">Max 8MB • Auto WebP</span>
+                      </div>
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-lg border border-default-200 bg-white dark:bg-black p-2 flex items-center justify-center shadow-xs">
                           <img
@@ -827,26 +838,37 @@ function SettingsContent() {
                             onError={(e: any) => { e.target.src = "/assets/logo.png"; }}
                           />
                         </div>
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setLogoFile(file);
-                              setLogoPreview(URL.createObjectURL(file));
-                            }
-                          }}
-                          className="text-xs text-default-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-                        />
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 8 * 1024 * 1024) {
+                                  alert("Logo image exceeds 8MB limit. Please choose a file under 8MB.");
+                                  e.target.value = "";
+                                  return;
+                                }
+                                setLogoFile(file);
+                                setLogoPreview(URL.createObjectURL(file));
+                              }
+                            }}
+                            className="text-xs text-default-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                          />
+                          <p className="text-[11px] text-default-400">Supported: PNG, JPG, SVG, WebP (Max 8MB)</p>
+                        </div>
                       </div>
                     </div>
 
                     {/* Site Favicon */}
                     <div className="space-y-3">
-                      <label className="block text-sm font-semibold text-foreground">
-                        Site Favicon (.ico / .png)
-                      </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-semibold text-foreground">
+                          Site Favicon (.ico / .png)
+                        </label>
+                        <span className="text-xs text-default-500 font-medium bg-default-100 px-2 py-0.5 rounded-full">Max 8MB</span>
+                      </div>
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-lg border border-default-200 bg-white dark:bg-black p-2 flex items-center justify-center shadow-xs">
                           <img
@@ -856,18 +878,26 @@ function SettingsContent() {
                             onError={(e: any) => { e.target.src = "/favicon.ico"; }}
                           />
                         </div>
-                        <input
-                          type="file"
-                          accept="image/x-icon,image/png,image/vnd.microsoft.icon"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setFaviconFile(file);
-                              setFaviconPreview(URL.createObjectURL(file));
-                            }
-                          }}
-                          className="text-xs text-default-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-                        />
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="file"
+                            accept="image/x-icon,image/png,image/vnd.microsoft.icon"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 8 * 1024 * 1024) {
+                                  alert("Favicon file exceeds 8MB limit. Please choose a file under 8MB.");
+                                  e.target.value = "";
+                                  return;
+                                }
+                                setFaviconFile(file);
+                                setFaviconPreview(URL.createObjectURL(file));
+                              }
+                            }}
+                            className="text-xs text-default-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                          />
+                          <p className="text-[11px] text-default-400">Supported: ICO, PNG (Max 8MB)</p>
+                        </div>
                       </div>
                     </div>
                   </div>

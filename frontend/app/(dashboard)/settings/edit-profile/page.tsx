@@ -177,17 +177,25 @@ export default function EditProfilePage() {
           className="w-24 h-24 rounded-full object-cover border border-border shadow-sm bg-muted"
         />
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Profile Photo
-          </label>
+          <div className="flex items-center gap-2">
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Profile Photo
+            </label>
+            <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
+              Max 8MB • Auto WebP
+            </span>
+          </div>
           <input
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
             onChange={handleFileChange}
             className="block text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
           />
+          <p className="text-xs text-muted-foreground">
+            Supported: JPG, PNG, WebP (Max 8MB, compressed to 1-3MB to optimize storage)
+          </p>
           {preview && (
-            <p className="text-xs text-muted-foreground font-medium">
+            <p className="text-xs text-primary font-medium">
               New image selected (click Update Profile to save)
             </p>
           )}

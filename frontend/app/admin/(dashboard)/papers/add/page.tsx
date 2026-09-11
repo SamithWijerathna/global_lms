@@ -18,6 +18,11 @@ export default function AddPaperPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 8 * 1024 * 1024) {
+        alert("Cover image exceeds 8MB limit. Please select an image under 8MB.");
+        e.target.value = "";
+        return;
+      }
       setSelectedFile(file);
       setPreview(URL.createObjectURL(file));
     }
@@ -85,13 +90,19 @@ export default function AddPaperPage() {
               />
 
               <div className="grid w-full items-center gap-2">
-                <label className="text-sm font-medium">Cover Image (optional)</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Cover Image (optional)</label>
+                  <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">Max 8MB • Auto WebP</span>
+                </div>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer"
                 />
+                <p className="text-xs text-default-400">
+                  Supported: JPG, PNG, WebP (Compressed to 1-3MB to optimize storage)
+                </p>
               </div>
 
               <div className="flex justify-end gap-4">

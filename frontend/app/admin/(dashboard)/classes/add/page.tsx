@@ -69,6 +69,18 @@ export default function AddClassPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > 8 * 1024 * 1024) {
+        confirm({
+          title: "Image Too Large",
+          message: "Class cover image exceeds the 8MB limit. Please select an image under 8MB.",
+          confirmText: "OK",
+          cancelText: "",
+          confirmColor: "warning",
+          onConfirm: async () => {},
+        });
+        e.target.value = "";
+        return;
+      }
       setImageFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
@@ -236,14 +248,20 @@ const handleSubmit = async (e: React.FormEvent) => {
               placeholder="Enter detailed class description with bolding, lists, and icons..."
             />
             <div>
-              <label className="block text-sm font-medium mb-2">Class Image</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium">Class Image</label>
+                <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">Max 8MB • Auto WebP</span>
+              </div>
               <input
                 id="image-input"
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer"
               />
+              <p className="text-xs text-default-400 mt-1.5">
+                Supported: JPG, PNG, WebP (Compressed to 1-3MB to optimize storage)
+              </p>
             </div>
 
             <Button

@@ -106,6 +106,16 @@ export default function BankTransferSection({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected && selected.size > 8 * 1024 * 1024) {
+      alert("Receipt file size exceeds the 8MB limit. Please choose a file smaller than 8MB.");
+      e.target.value = "";
+      return;
+    }
+    onFileChange(e);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Show selector only if there are MORE THAN 1 accounts */}
@@ -155,7 +165,12 @@ export default function BankTransferSection({
 
       {/* Upload Payment Receipt Dropzone */}
       <div>
-        <p className="font-medium text-sm mb-2">Upload Payment Receipt</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-medium text-sm">Upload Payment Receipt</p>
+          <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
+            Max 8MB • Auto WebP
+          </span>
+        </div>
         <label className={`relative flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl cursor-pointer transition-all overflow-hidden ${
           file
             ? "border-success-400 bg-success-50/20 dark:bg-success-950/20"
@@ -167,7 +182,7 @@ export default function BankTransferSection({
               <p className="text-sm text-default-700 font-medium mb-0.5">
                 <span className="text-primary font-semibold">Click to upload receipt</span> or drag and drop
               </p>
-              <p className="text-xs text-default-400">JPG, PNG or PDF (Max 10MB)</p>
+              <p className="text-xs text-default-400">JPG, PNG, WebP or PDF (Max 8MB, auto-optimized)</p>
             </div>
           ) : (
             <div className="relative w-full h-full p-3 flex items-center gap-4 bg-content1/90 backdrop-blur-sm">
@@ -203,7 +218,7 @@ export default function BankTransferSection({
             type="file"
             accept="image/*,.pdf"
             className="hidden"
-            onChange={onFileChange}
+            onChange={handleFileSelect}
             disabled={uploading}
           />
         </label>

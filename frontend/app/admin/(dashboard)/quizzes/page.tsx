@@ -61,6 +61,11 @@ export default function QuizzesPage() {
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!file) return null;
 
+    if (file.size > 8 * 1024 * 1024) {
+      alert("File size exceeds the 8MB limit. Please choose a smaller image.");
+      return null;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -411,7 +416,12 @@ export default function QuizzesPage() {
 
             {/* Question Image Upload */}
             <div>
-              <p className="font-medium mb-2">Question Image (optional)</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-medium">Question Image (optional)</p>
+                <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
+                  Max 8MB • Auto WebP
+                </span>
+              </div>
               {selectedQuestion?.image_url && (
                 <div className="mb-3">
                   <Image src={selectedQuestion.image_url} alt="Question" width={300} height={200} className="rounded-lg" />
@@ -419,7 +429,7 @@ export default function QuizzesPage() {
               )}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/jpg"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -428,6 +438,9 @@ export default function QuizzesPage() {
                   }
                 }}
               />
+              <p className="text-xs text-default-400 mt-1.5">
+                Supported: JPG, PNG, WebP (Compressed to 1-3MB to optimize storage)
+              </p>
             </div>
 
             <Textarea label="Explanation" value={selectedQuestion?.explanation || ""} onValueChange={(v) => setSelectedQuestion({ ...selectedQuestion, explanation: v })} />
@@ -503,7 +516,12 @@ export default function QuizzesPage() {
 
                       {/* Option Image Upload */}
                       <div>
-                        <p className="text-sm text-default-500 mb-1">Option Image (optional)</p>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm text-default-500">Option Image (optional)</p>
+                          <span className="text-[10px] text-primary font-medium bg-primary/10 px-1.5 py-0.5 rounded-full">
+                            Max 8MB
+                          </span>
+                        </div>
                         {opt.image_url && (
                           <div className="mb-3">
                             <Image src={opt.image_url} alt={`Option ${letter}`} width={200} height={140} className="rounded" />
@@ -511,7 +529,7 @@ export default function QuizzesPage() {
                         )}
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp,image/jpg"
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
@@ -525,6 +543,9 @@ export default function QuizzesPage() {
                             }
                           }}
                         />
+                        <p className="text-[11px] text-default-400 mt-1">
+                          JPG, PNG, WebP (Auto-optimized)
+                        </p>
                       </div>
                     </div>
                   );
