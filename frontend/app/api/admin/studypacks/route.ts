@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDBConnection, authorize } from "../../db";
 import fs from "fs";
 import path from "path";
+import { optimizeImageToWebP, validateImageUploadSize } from "@/lib/imageOptimizer";
 
 const uploadDir = path.join(process.cwd(), "public", "uploads", "studypacks");
 
@@ -54,10 +55,11 @@ export async function POST(req: Request) {
 
     let imageUrl = null;
     if (imageFile && imageFile.size > 0) {
+      validateImageUploadSize(imageFile.size);
       const buffer = Buffer.from(await imageFile.arrayBuffer());
-      const ext = path.extname(imageFile.name) || ".jpg";
-      const fileName = `${studypackId}${ext}`;
-      fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+      const optimized = await optimizeImageToWebP(buffer, imageFile.name, { category: "covers" });
+      const fileName = `${studypackId}${optimized.ext}`;
+      fs.writeFileSync(path.join(uploadDir, fileName), optimized.buffer);
       imageUrl = `/uploads/studypacks/${fileName}`;
     }
 
@@ -97,14 +99,15 @@ export async function PUT(req: Request) {
     let imageUrl: string | null = null;
 
     if (imageFile && imageFile.size > 0) {
+      validateImageUploadSize(imageFile.size);
 
       const [rows] = await db.query("SELECT studypack_id FROM studypack_list WHERE id = ?", [id]);
       const studypackId = (rows as any)[0].studypack_id;
 
       const buffer = Buffer.from(await imageFile.arrayBuffer());
-      const ext = path.extname(imageFile.name) || ".jpg";
-      const fileName = `${studypackId}${ext}`;
-      fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+      const optimized = await optimizeImageToWebP(buffer, imageFile.name, { category: "covers" });
+      const fileName = `${studypackId}${optimized.ext}`;
+      fs.writeFileSync(path.join(uploadDir, fileName), optimized.buffer);
       imageUrl = `/uploads/studypacks/${fileName}`;
     }
 

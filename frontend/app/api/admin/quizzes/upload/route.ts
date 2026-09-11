@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import { optimizeImageToWebP, validateImageUploadSize } from "@/lib/imageOptimizer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,17 +26,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Only images allowed" }, { status: 400 });
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
+    try {
+      validateImageUploadSize(file.size);
+    } catch (sizeErr: any) {
+      return NextResponse.json({ error: sizeErr.message || "File too large (max 8MB)" }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = path.extname(file.name) || ".jpg";
-    const filename = `${Date.now()}-${uuidv4()}${ext}`;
+    const optimized = await optimizeImageToWebP(buffer, file.name, { category: "general" });
+    const filename = `${Date.now()}-${uuidv4()}${optimized.ext}`;
     const filepath = path.join(UPLOAD_DIR, filename);
 
     const handle = await fs.open(filepath, "w");
-    await handle.write(buffer, 0, buffer.length);
+    await handle.write(optimized.buffer, 0, optimized.buffer.length);
     await handle.close();
 
     const url = `/uploads/quizzes/${filename}`;

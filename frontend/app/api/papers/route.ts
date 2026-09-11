@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDBConnection, authorize } from "../db";
 import { promises as fs } from "fs";
 import path from "path";
+import { optimizeImageToWebP, validateImageUploadSize } from "@/lib/imageOptimizer";
 
 const uploadDir = path.join(process.cwd(), "public", "uploads", "papers");
 
@@ -55,11 +56,12 @@ export async function PUT(req: Request) {
       const paper_id = `PP_${insertedId.toString().padStart(4, "0")}`;
 
       if (coverFile && coverFile.size > 0) {
-        const ext = path.extname(coverFile.name) || ".jpg";
-        coverFilename = `${insertedId}${ext}`;
-        const filePath = path.join(uploadDir, coverFilename);
+        validateImageUploadSize(coverFile.size);
         const bytes = await coverFile.arrayBuffer();
-        await fs.writeFile(filePath, Buffer.from(bytes));
+        const optimized = await optimizeImageToWebP(Buffer.from(bytes), coverFile.name, { category: "covers" });
+        coverFilename = `${insertedId}${optimized.ext}`;
+        const filePath = path.join(uploadDir, coverFilename);
+        await fs.writeFile(filePath, optimized.buffer);
       }
 
       await db.query(
@@ -78,6 +80,7 @@ export async function PUT(req: Request) {
       let coverFilename: string | null = null;
 
       if (coverFile && coverFile.size > 0) {
+        validateImageUploadSize(coverFile.size);
 
         const [oldRows]: any = await db.query(
           "SELECT paper_cover_image FROM paper_predefine WHERE id = ?",
@@ -91,11 +94,11 @@ export async function PUT(req: Request) {
           } catch {}
         }
 
-        const ext = path.extname(coverFile.name) || ".jpg";
-        coverFilename = `${id}${ext}`;
-        const filePath = path.join(uploadDir, coverFilename);
         const bytes = await coverFile.arrayBuffer();
-        await fs.writeFile(filePath, Buffer.from(bytes));
+        const optimized = await optimizeImageToWebP(Buffer.from(bytes), coverFile.name, { category: "covers" });
+        coverFilename = `${id}${optimized.ext}`;
+        const filePath = path.join(uploadDir, coverFilename);
+        await fs.writeFile(filePath, optimized.buffer);
       }
 
       await db.query(

@@ -231,6 +231,11 @@ export default function Signup() {
   };
 
   const handleImageUpload = (file: File) => {
+    if (file.size > 8 * 1024 * 1024) {
+      setError("Profile picture exceeds 8MB limit. Please choose an image under 8MB.");
+      return;
+    }
+    setError("");
     setForm({ ...form, profile_pic: file });
     setProfilePreview(URL.createObjectURL(file));
   };
@@ -542,10 +547,12 @@ export default function Signup() {
             <input
               type="file"
               accept="image/*"
+              className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
               onChange={(e) =>
                 e.target.files && handleImageUpload(e.target.files[0])
               }
             />
+            <p className="text-xs text-default-400">Supported formats: JPG, PNG, WebP (Max 8MB, auto-optimized)</p>
 
             {profilePreview && (
               <img

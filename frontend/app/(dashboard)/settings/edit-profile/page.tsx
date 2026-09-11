@@ -75,6 +75,10 @@ export default function EditProfilePage() {
         setErrorMessage("Please select a valid image file.");
         return;
       }
+      if (file.size > 8 * 1024 * 1024) {
+        setErrorMessage("Profile picture exceeds 8MB limit. Please choose an image under 8MB.");
+        return;
+      }
       setProfileFile(file);
       setPreview(URL.createObjectURL(file));
       setSuccessMessage("");

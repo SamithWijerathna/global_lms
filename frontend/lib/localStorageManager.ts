@@ -81,8 +81,11 @@ export function checkTenantLocalQuota(tenantId: string, newFileSizeBytes: number
   }
 }
 
+import { optimizeImageToWebP, validateImageUploadSize } from "./imageOptimizer";
+
 /**
  * Saves a file to local tenant storage under public/uploads/tenants/{tenantId}/{category}/
+ * Automatically converts images (avatars, covers, receipts) to WebP and compresses to under 1-3MB.
  */
 export async function saveTenantLocalFile(params: {
   tenantId: string;
@@ -93,24 +96,31 @@ export async function saveTenantLocalFile(params: {
 }): Promise<SaveFileResult> {
   const { tenantId, category, fileBuffer, originalFileName, maxStorageMb = 500 } = params;
 
-  // 1. Check Quota
-  checkTenantLocalQuota(tenantId, fileBuffer.length, maxStorageMb);
+  // 1. Check initial upload size limit (max 8MB)
+  validateImageUploadSize(fileBuffer.length);
 
-  // 2. Prepare paths
+  // 2. Optimize image & convert to WebP to save storage space
+  const optimized = await optimizeImageToWebP(fileBuffer, originalFileName, { category });
+  const finalBuffer = optimized.buffer;
+  const finalExt = optimized.ext;
+
+  // 3. Check Quota using the optimized file size (saves tenant quota)
+  checkTenantLocalQuota(tenantId, finalBuffer.length, maxStorageMb);
+
+  // 4. Prepare paths
   const cleanId = tenantId.replace(/[^a-zA-Z0-9_-]/g, "");
   const uploadDir = path.join(process.cwd(), "public", "uploads", "tenants", cleanId, category);
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
 
-  // 3. Generate secure unique filename
-  const ext = path.extname(originalFileName) || ".bin";
+  // 5. Generate secure unique filename with optimized extension
   const fileUuid = crypto.randomUUID();
-  const fileName = `${fileUuid}${ext.toLowerCase()}`;
+  const fileName = `${fileUuid}${finalExt.toLowerCase()}`;
   const absolutePath = path.join(uploadDir, fileName);
 
-  // 4. Write file synchronously / promise
-  await fs.promises.writeFile(absolutePath, fileBuffer);
+  // 6. Write file asynchronously
+  await fs.promises.writeFile(absolutePath, finalBuffer);
 
   const relativeUrl = `/uploads/tenants/${cleanId}/${category}/${fileName}`;
 
@@ -118,6 +128,6 @@ export async function saveTenantLocalFile(params: {
     relativeUrl,
     absolutePath,
     fileName,
-    sizeBytes: fileBuffer.length,
+    sizeBytes: finalBuffer.length,
   };
 }

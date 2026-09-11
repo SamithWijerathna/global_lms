@@ -7,6 +7,7 @@ import path from "node:path";
 import { resend, getResendFrom, buildTransactionalEmailHtml } from "@/src/lib/emailTemplates";
 import { getSystemSettingsServer } from "@/src/lib/getSystemSettings";
 import { checkAndRecordOtpRateLimit } from "@/lib/otpRateLimiter";
+import { optimizeImageToWebP, validateImageUploadSize } from "@/lib/imageOptimizer";
 
 
 async function getCurrentUser(req: Request, db: any) {
@@ -339,12 +340,13 @@ export async function POST(req: Request) {
 
     if (photoFile && (photoFile as any).size > 0) {
       const file = photoFile as File;
-      const ext = path.extname(file.name) || ".jpg";
-      photoFilename = `${currentUser.uuid}${ext}`;
-      const buffer = new Uint8Array(await file.arrayBuffer());
+      validateImageUploadSize(file.size);
+      const bytes = await file.arrayBuffer();
+      const optimized = await optimizeImageToWebP(Buffer.from(bytes), file.name, { category: "profiles" });
+      photoFilename = `${currentUser.uuid}${optimized.ext}`;
       const uploadPath = path.join(process.cwd(), "public", "uploads", photoFilename);
       await fs.mkdir(path.dirname(uploadPath), { recursive: true });
-      await fs.writeFile(uploadPath, buffer);
+      await fs.writeFile(uploadPath, optimized.buffer);
     }
 
     const updates: string[] = [];

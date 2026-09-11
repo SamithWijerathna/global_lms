@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDBConnection } from "../db";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { optimizeImageToWebP, validateImageUploadSize } from "@/lib/imageOptimizer";
 
 export const dynamic = "force-dynamic";
 
@@ -66,11 +67,11 @@ export async function POST(req: Request) {
       // Handle Logo Upload
       const logoFile = formData.get("logo_file");
       if (logoFile && logoFile instanceof File && logoFile.size > 0) {
+        validateImageUploadSize(logoFile.size);
         const bytes = await logoFile.arrayBuffer();
-        const buffer = new Uint8Array(bytes);
-        const ext = path.extname(logoFile.name) || ".png";
-        const filename = `logo-${Date.now()}${ext}`;
-        await writeFile(path.join(uploadDir, filename), buffer);
+        const optimized = await optimizeImageToWebP(Buffer.from(bytes), logoFile.name, { category: "branding" });
+        const filename = `logo-${Date.now()}${optimized.ext}`;
+        await writeFile(path.join(uploadDir, filename), optimized.buffer);
         const logoUrl = `/uploads/branding/${filename}`;
         await db.query(
           `INSERT INTO system_settings (setting_key, setting_value) VALUES ('site_logo_url', ?)
@@ -83,6 +84,7 @@ export async function POST(req: Request) {
       // Handle Favicon Upload
       const faviconFile = formData.get("favicon_file");
       if (faviconFile && faviconFile instanceof File && faviconFile.size > 0) {
+        validateImageUploadSize(faviconFile.size);
         const bytes = await faviconFile.arrayBuffer();
         const buffer = new Uint8Array(bytes);
         const ext = path.extname(faviconFile.name) || ".ico";
