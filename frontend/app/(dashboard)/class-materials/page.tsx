@@ -641,8 +641,9 @@ function QuickAccessContent() {
   };
 
   const startRenewal = async (cls: ClassItem) => {
-    if (pendingClassIds.includes(cls.class_id)) {
-      alert("You already have a pending payment for renewing this class.");
+    const isPending = pendingClassIds.some((id) => String(id) === String(cls.class_id));
+    if (isPending) {
+      alert("You already have a pending payment for renewing this class. Please wait for admin approval.");
       return;
     }
     try {
@@ -675,6 +676,7 @@ function QuickAccessContent() {
 
   const handlePaymentSubmit = async () => {
     if (!file || !user || !paymentClass) return;
+    if (uploading) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("receipt", file);
@@ -690,13 +692,16 @@ function QuickAccessContent() {
         body: formData,
       });
       if (!res.ok) throw new Error((await res.json()).error || "Upload failed");
+      
+      // Optimistically update pendingClassIds
+      setPendingClassIds((prev) => [...prev, String(paymentClass.class_id)]);
+
       setPaymentSubmitted(true);
       setTimeout(() => {
         resetPaymentStates();
         setIsPaymentModalOpen(false);
-        // Optional: refresh page after submission
         window.location.reload();
-      }, 5000);
+      }, 3000);
     } catch (err: any) {
       alert(err.message || "Upload failed");
     } finally {

@@ -446,91 +446,106 @@ export default function MyLessonPage() {
   const [uploading, setUploading] = useState(false);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
 
-  useEffect(() => {
+  const loadClasses = async (isSilent = false) => {
     if (!user?.uuid) {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
       return;
     }
-    (async () => {
-      try {
-        const paymentRes = await fetch("/api/payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "user_payments",
-            student_uuid: user.uuid,
-          }),
-        });
-        const paymentData = await paymentRes.json();
-        const payments = Array.isArray(paymentData)
-          ? paymentData
-          : paymentData.data || [];
-        const approvedIds = payments
-          .filter((p: any) => p.status === "approved" && p.item_type === "class")
-          .map((p: any) => p.item_id);
-        const pendingIds = payments
-          .filter((p: any) => p.status === "pending" && p.item_type === "class")
-          .map((p: any) => p.item_id);
-        setPendingClassIds(pendingIds);
+    if (!isSilent) setLoading(true);
+    try {
+      const paymentRes = await fetch("/api/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "user_payments",
+          student_uuid: user.uuid,
+        }),
+      });
+      const paymentData = await paymentRes.json().catch(() => []);
+      const payments = Array.isArray(paymentData)
+        ? paymentData
+        : paymentData.data || [];
+      const approvedIds = payments
+        .filter((p: any) => p.status === "approved" && p.item_type === "class")
+        .map((p: any) => String(p.item_id));
+      const pendingIds = payments
+        .filter((p: any) => p.status === "pending" && p.item_type === "class")
+        .map((p: any) => String(p.item_id));
+      setPendingClassIds(pendingIds);
 
-        const classRes = await fetch("/api/dashboard/class", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "class_data" }),
-        });
-        let classRaw = await classRes.json();
-        const classList = Array.isArray(classRaw)
-          ? classRaw
-          : Array.isArray(classRaw.data)
-          ? classRaw.data
-          : Array.isArray(classRaw.rows)
-          ? classRaw.rows
-          : [];
+      const classRes = await fetch("/api/dashboard/class", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "class_data" }),
+      });
+      let classRaw = await classRes.json();
+      const classList = Array.isArray(classRaw)
+        ? classRaw
+        : Array.isArray(classRaw.data)
+        ? classRaw.data
+        : Array.isArray(classRaw.rows)
+        ? classRaw.rows
+        : [];
 
-        const enrichedClasses = classList
-          .filter((c: any) => approvedIds.includes(c.class_id))
-          .map((cls: any) => {
-            const payment = payments.find(
-              (p: any) =>
-                p.item_id === cls.class_id && p.status === "approved"
-            );
-            if (payment?.approved_at) {
-              const approvedDate = new Date(payment.approved_at);
-              let expiryDate: Date | undefined;
-              if (cls.renew_type === "monthly") {
-                expiryDate = new Date(
-                  approvedDate.getFullYear(),
-                  approvedDate.getMonth() + 1,
-                  0
-                );
-              } else if (cls.renew_type === "30days") {
-                expiryDate = new Date(approvedDate);
-                expiryDate.setDate(expiryDate.getDate() + 30);
-              }
-              const isExpired = expiryDate ? new Date() > expiryDate : false;
-              return {
-                ...cls,
-                class_price: Number(cls.class_price) || 0,
-                approved_at: payment.approved_at,
-                expiry_date: expiryDate,
-                is_active: !isExpired,
-                is_expired: isExpired,
-              };
+      const enrichedClasses = classList
+        .filter((c: any) => approvedIds.some((id) => String(id) === String(c.class_id) || String(id) === String(c.id)))
+        .map((cls: any) => {
+          const payment = payments.find(
+            (p: any) =>
+              (String(p.item_id) === String(cls.class_id) || String(p.item_id) === String(cls.id)) &&
+              p.status === "approved"
+          );
+          if (payment?.approved_at) {
+            const approvedDate = new Date(payment.approved_at);
+            let expiryDate: Date | undefined;
+            if (cls.renew_type === "monthly") {
+              expiryDate = new Date(
+                approvedDate.getFullYear(),
+                approvedDate.getMonth() + 1,
+                0
+              );
+            } else if (cls.renew_type === "30days") {
+              expiryDate = new Date(approvedDate);
+              expiryDate.setDate(expiryDate.getDate() + 30);
             }
+            const isExpired = expiryDate ? new Date() > expiryDate : false;
             return {
               ...cls,
               class_price: Number(cls.class_price) || 0,
+              approved_at: payment.approved_at,
+              expiry_date: expiryDate,
+              is_active: !isExpired,
+              is_expired: isExpired,
             };
-          });
-        setClasses(enrichedClasses);
-        setError(null);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load classes.");
-      } finally {
-        setLoading(false);
-      }
-    })();
+          }
+          return {
+            ...cls,
+            class_price: Number(cls.class_price) || 0,
+          };
+        });
+      setClasses(enrichedClasses);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      if (!isSilent) setError("Failed to load classes.");
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadClasses();
+  }, [user?.uuid]);
+
+  // Refresh on focus / visibility change
+  useEffect(() => {
+    const handleFocus = () => loadClasses(true);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
   }, [user?.uuid]);
 
   const formatExpiry = (date?: Date) => {
@@ -548,8 +563,9 @@ export default function MyLessonPage() {
   };
 
   const startRenewal = async (cls: ClassItem) => {
-    if (pendingClassIds.includes(cls.class_id)) {
-      alert("You already have a pending payment for renewing this class.");
+    const isPending = pendingClassIds.some((id) => String(id) === String(cls.class_id));
+    if (isPending) {
+      alert("You already have a pending payment for renewing this class. Please wait for admin approval.");
       return;
     }
     try {
@@ -567,7 +583,8 @@ export default function MyLessonPage() {
   };
 
   const viewClass = async (cls: ClassItem) => {
-    if (cls.is_expired || pendingClassIds.includes(cls.class_id)) {
+    const isPending = pendingClassIds.some((id) => String(id) === String(cls.class_id));
+    if (cls.is_expired || isPending) {
       alert(
         "This class is expired or has a pending renewal. Please renew to access materials."
       );
@@ -611,6 +628,7 @@ export default function MyLessonPage() {
 
   const handlePaymentSubmit = async () => {
     if (!file || !user || !paymentClass) return;
+    if (uploading) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("receipt", file);
@@ -626,11 +644,20 @@ export default function MyLessonPage() {
         body: formData,
       });
       if (!res.ok) throw new Error((await res.json()).error || "Upload failed");
+      
+      // Optimistically update pendingClassIds
+      setPendingClassIds((prev) => [...prev, String(paymentClass.class_id)]);
+
       setPaymentSubmitted(true);
+
+      // Immediately refetch from backend
+      await loadClasses(true);
+
       setTimeout(() => {
         resetPaymentStates();
         setIsPaymentModalOpen(false);
-      }, 5000);
+        loadClasses(true);
+      }, 4000);
     } catch (err: any) {
       alert(err.message || "Upload failed");
     } finally {

@@ -4,7 +4,7 @@ import { getDBConnection } from "../../db";
 import jwt from "jsonwebtoken";
 
 export async function POST(req: NextRequest) {
-  const db = await getDBConnection();
+  const db = await getDBConnection(req);
   try {
     const body = await req.json();
     const { action } = body;

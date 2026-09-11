@@ -59,6 +59,66 @@ export async function POST(req: Request) {
     }
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    const db = await getDBConnection(req);
+
+    // Resolve all ID variants for this class / item
+    let idVariants = [itemIdStr];
+    if (itemType === "class") {
+      try {
+        const [clsRows]: any = await db.query(
+          "SELECT id, class_id FROM class_list WHERE class_id = ? OR id = ? LIMIT 1",
+          [itemIdStr, itemIdStr]
+        );
+        if (clsRows && clsRows.length > 0) {
+          if (clsRows[0].class_id) idVariants.push(String(clsRows[0].class_id));
+          if (clsRows[0].id) idVariants.push(String(clsRows[0].id));
+        }
+      } catch (err) {
+        console.warn("Could not check class_list id variants:", err);
+      }
+    } else if (itemType === "studypack") {
+      try {
+        const [spRows]: any = await db.query(
+          "SELECT id, studypack_id FROM studypack_list WHERE studypack_id = ? OR id = ? LIMIT 1",
+          [itemIdStr, itemIdStr]
+        );
+        if (spRows && spRows.length > 0) {
+          if (spRows[0].studypack_id) idVariants.push(String(spRows[0].studypack_id));
+          if (spRows[0].id) idVariants.push(String(spRows[0].id));
+        }
+      } catch (err) {
+        console.warn("Could not check studypack_list id variants:", err);
+      }
+    }
+    idVariants = Array.from(new Set(idVariants));
+
+    // Check for existing pending or approved payment to prevent duplicate payments
+    const [existingPayments]: any = await db.query(
+      `SELECT id, status, payment_uuid FROM payments 
+       WHERE (student_uuid = ? OR student_uuid = (SELECT student_id FROM users WHERE uuid = ? LIMIT 1))
+         AND item_type = ? 
+         AND item_id IN (?) 
+         AND status IN ('pending', 'approved') 
+       ORDER BY created_at DESC LIMIT 1`,
+      [student_uuid, student_uuid, itemType, idVariants]
+    );
+
+    if (existingPayments && existingPayments.length > 0) {
+      const ex = existingPayments[0];
+      if (ex.status === "approved") {
+        return NextResponse.json(
+          { error: "You are already enrolled in this class / item." },
+          { status: 400 }
+        );
+      }
+      if (ex.status === "pending") {
+        return NextResponse.json(
+          { error: "You already have a pending payment verification for this class / item. Please wait for admin approval." },
+          { status: 400 }
+        );
+      }
+    }
+
     const meta = await getTenantMeta(req);
     let saveResult;
     try {
@@ -76,7 +136,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const db = await getDBConnection();
     await db.query(
       `INSERT INTO payments
       (payment_uuid, student_uuid, amount, item_id, bank, transaction_proof, item_type, created_at, status)

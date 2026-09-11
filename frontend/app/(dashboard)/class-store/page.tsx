@@ -39,88 +39,123 @@ export default function LessonStorePage() {
   const [selectedDetailsClass, setSelectedDetailsClass] = useState<any>(null);
 
   // Pending & approved class IDs
-  const [pendingClassIds, setPendingClassIds] = useState<number[]>([]);
-  const [approvedClassIds, setApprovedClassIds] = useState<number[]>([]);
+  const [pendingClassIds, setPendingClassIds] = useState<string[]>([]);
+  const [approvedClassIds, setApprovedClassIds] = useState<string[]>([]);
 
-  useEffect(() => {
+  const isClassApproved = (cls: any) => {
+    if (!cls) return false;
+    return approvedClassIds.some(
+      (id) =>
+        (cls.class_id && String(id) === String(cls.class_id)) ||
+        (cls.id && String(id) === String(cls.id))
+    );
+  };
+
+  const isClassPending = (cls: any) => {
+    if (!cls) return false;
+    return pendingClassIds.some(
+      (id) =>
+        (cls.class_id && String(id) === String(cls.class_id)) ||
+        (cls.id && String(id) === String(cls.id))
+    );
+  };
+
+  const loadClassData = async (isSilent = false) => {
     if (!user?.uuid || !user?.batch) {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
       return;
     }
 
-    (async () => {
+    if (!isSilent) setLoading(true);
+
+    try {
+      // Fetch user's payments
+      const paymentRes = await fetch("/api/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "user_payments",
+          student_uuid: user.uuid,
+        }),
+      });
+      const paymentData = await paymentRes.json().catch(() => []);
+
+      const payments = Array.isArray(paymentData) ? paymentData : paymentData.data || [];
+
+      const approvedIds = payments
+        .filter((p: any) => p.status === "approved" && p.item_type === "class")
+        .map((p: any) => String(p.item_id));
+
+      const pendingIds = payments
+        .filter((p: any) => p.status === "pending" && p.item_type === "class")
+        .map((p: any) => String(p.item_id));
+
+      setApprovedClassIds(approvedIds);
+      setPendingClassIds(pendingIds);
+
+      // Fetch all classes
+      const res = await fetch("/api/dashboard/class", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "class_data" }),
+      });
+      let data: any;
       try {
-        // Fetch user's payments
-        const paymentRes = await fetch("/api/payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "user_payments",
-            student_uuid: user.uuid,
-          }),
-        });
-        const paymentData = await paymentRes.json();
-
-        const payments = Array.isArray(paymentData) ? paymentData : paymentData.data || [];
-
-        const approvedIds = payments
-          .filter((p: any) => p.status === "approved" && p.item_type === "class")
-          .map((p: any) => p.item_id);
-
-        const pendingIds = payments
-          .filter((p: any) => p.status === "pending" && p.item_type === "class")
-          .map((p: any) => p.item_id);
-
-        setApprovedClassIds(approvedIds);
-        setPendingClassIds(pendingIds);
-
-        // Fetch all classes
-        const res = await fetch("/api/dashboard/class", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "class_data" }),
-        });
-        let data: any;
-        try {
-          data = await res.json();
-        } catch (e) {
-          const text = await res.text();
-          data = text ? JSON.parse(text) : null;
-        }
-
-        const normalized = Array.isArray(data)
-          ? data
-          : data && Array.isArray(data.rows)
-            ? data.rows
-            : data && Array.isArray(data.data)
-              ? data.data
-              : [];
-
-        if (!Array.isArray(normalized)) {
-          setError("Unexpected API response. Please try again.");
-          setClasses([]);
-          return;
-        }
-
-        // Include all classes for the user's batch (purchased/approved, pending, and available)
-        const filteredClasses = normalized.filter((cls: any) => {
-          return cls.batch === user.batch;
-        });
-
-        if (filteredClasses.length === 0) {
-          setError("No available classes for your batch at this time.");
-          setClasses([]);
-        } else {
-          setError(null);
-          setClasses(filteredClasses);
-        }
-      } catch (err: any) {
-        console.error(err);
-        setError("Failed to load classes. Please try again.");
-      } finally {
-        setLoading(false);
+        data = await res.json();
+      } catch (e) {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : null;
       }
-    })();
+
+      const normalized = Array.isArray(data)
+        ? data
+        : data && Array.isArray(data.rows)
+          ? data.rows
+          : data && Array.isArray(data.data)
+            ? data.data
+            : [];
+
+      if (!Array.isArray(normalized)) {
+        if (!isSilent) setError("Unexpected API response. Please try again.");
+        setClasses([]);
+        return;
+      }
+
+      // Include all classes for the user's batch (purchased/approved, pending, and available)
+      const filteredClasses = normalized.filter((cls: any) => {
+        return cls.batch === user.batch;
+      });
+
+      if (filteredClasses.length === 0) {
+        if (!isSilent) setError("No available classes for your batch at this time.");
+        setClasses([]);
+      } else {
+        setError(null);
+        setClasses(filteredClasses);
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (!isSilent) setError("Failed to load classes. Please try again.");
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadClassData();
+  }, [user?.batch, user?.uuid]);
+
+  // Window focus & visibility listener to keep class statuses updated
+  useEffect(() => {
+    const handleFocus = () => {
+      loadClassData(true);
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
   }, [user?.batch, user?.uuid]);
 
   const resetPaymentStates = () => {
@@ -152,6 +187,7 @@ export default function LessonStorePage() {
       return;
     }
 
+    if (uploading) return;
     setUploading(true);
 
     const classId = selectedClass.class_id || selectedClass.id;
@@ -173,11 +209,24 @@ export default function LessonStorePage() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to upload receipt");
 
+      // Optimistically append class to pending list so buttons update immediately
+      setPendingClassIds((prev) => [
+        ...prev,
+        String(classId),
+        String(selectedClass.id || ""),
+        String(selectedClass.class_id || ""),
+      ].filter(Boolean));
+
       setPaymentSubmitted(true);
+
+      // Immediately refetch classes and payment status from server
+      await loadClassData(true);
+
       setTimeout(() => {
         resetPaymentStates();
         setIsPaymentModalOpen(false);
-      }, 5000);
+        loadClassData(true);
+      }, 4000);
     } catch (err: any) {
       alert(err.message || "Upload failed. Please try again.");
     } finally {
@@ -191,12 +240,17 @@ export default function LessonStorePage() {
   };
 
   const enrollInClass = async (cls: any) => {
-    const classId = cls.class_id || cls.id;
-
-    if (pendingClassIds.includes(classId)) {
-      alert("You already have a pending payment for this class.");
+    if (isClassApproved(cls)) {
+      alert("You are already enrolled in this class.");
       return;
     }
+
+    if (isClassPending(cls)) {
+      alert("You already have a pending payment for this class. Please wait for admin approval.");
+      return;
+    }
+
+    const classId = cls.class_id || cls.id;
 
     try {
       await fetch("/api/payment/select", {
@@ -270,8 +324,8 @@ export default function LessonStorePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 items-stretch">
           {classes.map((cls: any) => {
             const classId = cls.class_id || cls.id;
-            const isPending = pendingClassIds.includes(classId);
-            const isApproved = approvedClassIds.includes(classId);
+            const isPending = isClassPending(cls);
+            const isApproved = isClassApproved(cls);
 
             return (
               <Card
@@ -358,7 +412,7 @@ export default function LessonStorePage() {
                           color="success"
                           size="sm"
                           className="flex-1 text-white font-semibold text-xs shadow-md"
-                          onPress={() => router.push("/myClasses")}
+                          onPress={() => router.push("/my-classes")}
                         >
                           Go to Class
                         </Button>
@@ -456,17 +510,38 @@ export default function LessonStorePage() {
                 <Button variant="flat" onPress={onClose}>
                   Close
                 </Button>
-                {selectedDetailsClass && !approvedClassIds.includes(selectedDetailsClass.class_id || selectedDetailsClass.id) && (
-                  <Button
-                    color="primary"
-                    className="font-semibold shadow-md"
-                    onPress={() => {
-                      onClose();
-                      enrollInClass(selectedDetailsClass);
-                    }}
-                  >
-                    Enroll Now
-                  </Button>
+                {selectedDetailsClass && (
+                  isClassApproved(selectedDetailsClass) ? (
+                    <Button
+                      color="success"
+                      className="font-semibold shadow-md text-white"
+                      onPress={() => {
+                        onClose();
+                        router.push("/my-classes");
+                      }}
+                    >
+                      Go to Class
+                    </Button>
+                  ) : isClassPending(selectedDetailsClass) ? (
+                    <Button
+                      color="default"
+                      className="font-semibold shadow-md"
+                      isDisabled
+                    >
+                      Payment Pending
+                    </Button>
+                  ) : (
+                    <Button
+                      color="primary"
+                      className="font-semibold shadow-md"
+                      onPress={() => {
+                        onClose();
+                        enrollInClass(selectedDetailsClass);
+                      }}
+                    >
+                      Enroll Now
+                    </Button>
+                  )
                 )}
               </ModalFooter>
             </>
