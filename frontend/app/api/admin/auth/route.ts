@@ -215,7 +215,7 @@ export async function POST(req: Request) {
     `);
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
     await db.query(
       "INSERT INTO admin_password_resets (email, token, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token = ?, expires_at = ?",
@@ -235,7 +235,7 @@ export async function POST(req: Request) {
           heading: "Admin Password Reset Code",
           description: "We received a request to reset your LMS administrator account password. Use the verification code below to set a new password.",
           code,
-          expiresInText: "15 minutes",
+          expiresInText: "30 minutes",
           securityNote: "If you did not request this administrator password reset, please contact your system superuser immediately. Your account remains protected.",
           copyrightText: sysSettings.copyright_text,
         }),

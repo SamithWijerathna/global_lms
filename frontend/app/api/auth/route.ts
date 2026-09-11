@@ -235,7 +235,7 @@ export async function POST(req: Request) {
       }
 
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expires = new Date(Date.now() + 10 * 60 * 1000);
+      const expires = new Date(Date.now() + 30 * 60 * 1000);
       await db.query(
         "INSERT INTO email_otps (email, otp, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE otp=?, expires_at=?",
         [email, code, expires, code, expires]
@@ -253,7 +253,7 @@ export async function POST(req: Request) {
             heading: "Account Verification Code",
             description: "Use the One-Time Password (OTP) below to verify your account and complete your sign up.",
             code,
-            expiresInText: "10 minutes",
+            expiresInText: "30 minutes",
             securityNote: "If you did not request this verification code, please safely ignore this email.",
             copyrightText: sysSettings.copyright_text,
           }),
@@ -495,7 +495,7 @@ export async function POST(req: Request) {
       }
 
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expires = new Date(Date.now() + 15 * 60 * 1000);
+      const expires = new Date(Date.now() + 30 * 60 * 1000);
       await db.query(
         "INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token = ?, expires_at = ?",
         [email, code, expires, code, expires]
@@ -513,7 +513,7 @@ export async function POST(req: Request) {
             heading: "Password Reset Code",
             description: "We received a request to reset your password. Use the verification code below to proceed with setting your new password.",
             code,
-            expiresInText: "15 minutes",
+            expiresInText: "30 minutes",
             securityNote: "If you did not request a password reset, you can safely ignore this email. Your account remains secure.",
             copyrightText: sysSettings.copyright_text,
           }),
