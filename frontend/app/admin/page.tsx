@@ -7,7 +7,11 @@ import { useSystemSettings } from "@/src/lib/useSystemSettings";
 
 export default function AdminRootPage() {
   const router = useRouter();
-  const { settings } = useSystemSettings();
+  const { settings, refetchSettings } = useSystemSettings();
+
+  useEffect(() => {
+    refetchSettings();
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -44,12 +48,13 @@ export default function AdminRootPage() {
 
       <div className="relative z-10 flex flex-col items-center">
         <img
+          key={settings.site_logo_url || "admin-loading-logo"}
           src={settings.site_logo_url || "/assets/logo.png"}
           alt={settings.site_title || "LMS Platform"}
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/assets/logo.png";
           }}
-          className="w-32 h-32 sm:w-36 sm:h-36 object-contain mb-4 transition-all drop-shadow-md"
+          className="w-44 h-auto max-h-24 sm:w-56 sm:max-h-28 object-contain mb-6 transition-all drop-shadow-md"
         />
         <Spinner label="Checking admin session…" />
       </div>

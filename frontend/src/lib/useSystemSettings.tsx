@@ -36,17 +36,33 @@ const SystemSettingsContext = createContext<SystemSettingsContextType>({
   refetchSettings: async () => {},
 });
 
-export function SystemSettingsProvider({ children }: { children: ReactNode }) {
+export function SystemSettingsProvider({
+  children,
+  initialSettings,
+}: {
+  children: ReactNode;
+  initialSettings?: SystemSettings;
+}) {
   const [settings, setSettings] = useState<SystemSettings>(() => {
+    if (
+      initialSettings &&
+      initialSettings.site_logo_url &&
+      initialSettings.site_logo_url !== "/assets/logo.png"
+    ) {
+      return initialSettings;
+    }
     if (typeof window !== "undefined") {
       try {
         const cached = localStorage.getItem("lms_system_settings");
         if (cached) {
-          return { ...defaultSettings, ...JSON.parse(cached) };
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed === "object") {
+            return { ...defaultSettings, ...parsed };
+          }
         }
       } catch (e) {}
     }
-    return defaultSettings;
+    return initialSettings || defaultSettings;
   });
   const [loading, setLoading] = useState(true);
 
@@ -76,8 +92,17 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (
+      initialSettings &&
+      initialSettings.site_logo_url &&
+      initialSettings.site_logo_url !== "/assets/logo.png"
+    ) {
+      try {
+        localStorage.setItem("lms_system_settings", JSON.stringify(initialSettings));
+      } catch (e) {}
+    }
     fetchSettings();
-  }, []);
+  }, [initialSettings]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && settings.site_title) {

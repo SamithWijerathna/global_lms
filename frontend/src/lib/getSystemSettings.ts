@@ -48,7 +48,7 @@ export async function getSystemSettingsServer(): Promise<SystemSettings> {
       return settings;
     }
 
-    const db = await getDBConnection();
+    const db = await getDBConnection(cleanDomain || slug || undefined);
     const [rows]: any = await db.query("SELECT setting_key, setting_value FROM system_settings");
     if (Array.isArray(rows)) {
       rows.forEach((r: any) => {

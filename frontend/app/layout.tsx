@@ -51,11 +51,18 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  let initialSettings;
+  try {
+    initialSettings = await getSystemSettingsServer();
+  } catch (e) {
+    // ignore
+  }
+
   return (
     <html suppressHydrationWarning lang="en">
       <head />
@@ -65,14 +72,8 @@ export default function RootLayout({
           fontSans.variable,
         )}
       >
-        <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-  
-
-
-              {children}
-       
-           
-       
+        <Providers initialSettings={initialSettings} themeProps={{ attribute: "class", defaultTheme: "dark" }}>
+          {children}
         </Providers>
       </body>
     </html>
