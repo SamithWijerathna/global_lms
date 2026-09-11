@@ -21,6 +21,7 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/modal";
+import { Eye, EyeOff } from "lucide-react";
 
 import { getBackendApiUrl } from "@/src/lib/apiConfig";
 
@@ -49,6 +50,7 @@ export default function SaaSAdminPage() {
   const [adminPassword, setAdminPassword] = useState("Samith@071");
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   const [tenants, setTenants] = useState<TenantItem[]>([]);
   const [loadingTenants, setLoadingTenants] = useState(false);
@@ -347,10 +349,25 @@ export default function SaaSAdminPage() {
               />
               <Input
                 label="Master Password"
-                type="password"
+                type={showAdminPassword ? "text" : "password"}
                 value={adminPassword}
                 onValueChange={setAdminPassword}
                 isRequired
+                variant="bordered"
+                endContent={
+                  <button
+                    className="focus:outline-none"
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    aria-label="toggle master password visibility"
+                  >
+                    {showAdminPassword ? (
+                      <EyeOff className="w-4 h-4 text-default-400 pointer-events-none" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-default-400 pointer-events-none" />
+                    )}
+                  </button>
+                }
               />
               <Button
                 color="primary"

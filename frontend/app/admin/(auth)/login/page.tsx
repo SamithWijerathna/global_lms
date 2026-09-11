@@ -7,11 +7,13 @@ import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Checkbox } from "@heroui/checkbox";
 import { Link } from "@heroui/link";
+import { Icon } from "@iconify/react";
 import { useSystemSettings } from "@/src/lib/useSystemSettings";
 
 export default function AdminLoginPage() {
   const { settings } = useSystemSettings();
   const [isLoading, setIsLoading] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -72,9 +74,24 @@ export default function AdminLoginPage() {
 
             <Input
               name="password"
-              type="password"
+              type={isVisible ? "text" : "password"}
               label="Password"
+              placeholder="Enter your password"
+              variant="bordered"
               isRequired
+              endContent={
+                <button
+                  className="focus:outline-none"
+                  type="button"
+                  onClick={() => setIsVisible(!isVisible)}
+                  aria-label="toggle password visibility"
+                >
+                  <Icon
+                    className="text-2xl text-default-400 pointer-events-none"
+                    icon={isVisible ? "solar:eye-closed-linear" : "solar:eye-bold"}
+                  />
+                </button>
+              }
             />
 
             <div className="flex items-center justify-between">

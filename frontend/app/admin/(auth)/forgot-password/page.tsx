@@ -8,7 +8,7 @@ import { InputOtp } from "@heroui/input-otp";
 import { Link } from "@heroui/link";
 import { useRouter } from "next/navigation";
 import { useSystemSettings } from "@/src/lib/useSystemSettings";
-import { ArrowLeft, CheckCircle2, ShieldCheck, KeyRound, Mail } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ShieldCheck, KeyRound, Mail, Eye, EyeOff } from "lucide-react";
 
 export default function AdminForgotPasswordPage() {
   const router = useRouter();
@@ -19,6 +19,8 @@ export default function AdminForgotPasswordPage() {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -315,7 +317,7 @@ export default function AdminForgotPasswordPage() {
           {step === 3 && (
             <form onSubmit={handleResetPassword} className="space-y-4">
               <Input
-                type="password"
+                type={showNewPassword ? "text" : "password"}
                 label="New Admin Password"
                 placeholder="••••••••"
                 value={newPassword}
@@ -323,10 +325,24 @@ export default function AdminForgotPasswordPage() {
                 isRequired
                 variant="bordered"
                 startContent={<KeyRound className="w-4 h-4 text-gray-400" />}
+                endContent={
+                  <button
+                    className="focus:outline-none"
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    aria-label="toggle password visibility"
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="w-4 h-4 text-default-400 pointer-events-none" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-default-400 pointer-events-none" />
+                    )}
+                  </button>
+                }
               />
 
               <Input
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 label="Confirm New Password"
                 placeholder="••••••••"
                 value={confirmPassword}
@@ -334,6 +350,20 @@ export default function AdminForgotPasswordPage() {
                 isRequired
                 variant="bordered"
                 startContent={<KeyRound className="w-4 h-4 text-gray-400" />}
+                endContent={
+                  <button
+                    className="focus:outline-none"
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label="toggle password visibility"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4 text-default-400 pointer-events-none" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-default-400 pointer-events-none" />
+                    )}
+                  </button>
+                }
               />
 
               <Button

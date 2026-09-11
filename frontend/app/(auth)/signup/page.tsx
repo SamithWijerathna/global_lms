@@ -18,6 +18,7 @@ import {
   Button,
   useDisclosure,
 } from "@heroui/react";
+import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 import { useSystemSettings } from "@/src/lib/useSystemSettings";
 
@@ -91,6 +92,7 @@ export default function Signup() {
   const [error, setError] = React.useState("");
   const [successMessage, setSuccessMessage] = React.useState("");
   const [isAgreed, setIsAgreed] = React.useState(false);
+  const [isVisiblePassword, setIsVisiblePassword] = React.useState(false);
   const [batchesList, setBatchesList] = React.useState<Array<{ value: string; label: string }>>([]);
 
   React.useEffect(() => {
@@ -371,11 +373,26 @@ export default function Signup() {
               fullWidth
               className="w-full"
               label="Password"
-              type="password"
+              placeholder="Enter your password"
+              type={isVisiblePassword ? "text" : "password"}
+              variant="bordered"
               isRequired
               value={form.password}
               onValueChange={(value) =>
                 setForm({ ...form, password: value })
+              }
+              endContent={
+                <button
+                  className="focus:outline-none"
+                  type="button"
+                  onClick={() => setIsVisiblePassword(!isVisiblePassword)}
+                  aria-label="toggle password visibility"
+                >
+                  <Icon
+                    className="text-2xl text-default-400 pointer-events-none"
+                    icon={isVisiblePassword ? "solar:eye-closed-linear" : "solar:eye-bold"}
+                  />
+                </button>
               }
             />
             <Checkbox 

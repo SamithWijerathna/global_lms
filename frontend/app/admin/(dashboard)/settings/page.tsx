@@ -42,6 +42,7 @@ import { useSystemSettings } from "@/src/lib/useSystemSettings";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { DomainSettingsTab } from "@/components/DomainSettingsTab";
+import { Eye, EyeOff } from "lucide-react";
 
 interface User {
   uuid: string;
@@ -81,6 +82,10 @@ function SettingsContent() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showModalPassword, setShowModalPassword] = useState(false);
 
   // Theme state
   const [isDark, setIsDark] = useState(false);
@@ -699,9 +704,72 @@ function SettingsContent() {
                 <h2 className="text-xl font-bold">Change Password</h2>
               </CardHeader>
               <CardBody className="space-y-4">
-                <Input type="password" label="Current Password" value={oldPassword} onValueChange={setOldPassword} />
-                <Input type="password" label="New Password" value={newPassword} onValueChange={setNewPassword} />
-                <Input type="password" label="Confirm New Password" value={confirmPassword} onValueChange={setConfirmPassword} />
+                <Input
+                  type={showOldPassword ? "text" : "password"}
+                  label="Current Password"
+                  placeholder="Enter current password"
+                  variant="bordered"
+                  value={oldPassword}
+                  onValueChange={setOldPassword}
+                  endContent={
+                    <button
+                      className="focus:outline-none"
+                      type="button"
+                      onClick={() => setShowOldPassword(!showOldPassword)}
+                      aria-label="toggle current password visibility"
+                    >
+                      {showOldPassword ? (
+                        <EyeOff className="w-4 h-4 text-default-400 pointer-events-none" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-default-400 pointer-events-none" />
+                      )}
+                    </button>
+                  }
+                />
+                <Input
+                  type={showNewPassword ? "text" : "password"}
+                  label="New Password"
+                  placeholder="Enter new password"
+                  variant="bordered"
+                  value={newPassword}
+                  onValueChange={setNewPassword}
+                  endContent={
+                    <button
+                      className="focus:outline-none"
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      aria-label="toggle new password visibility"
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="w-4 h-4 text-default-400 pointer-events-none" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-default-400 pointer-events-none" />
+                      )}
+                    </button>
+                  }
+                />
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  label="Confirm New Password"
+                  placeholder="Confirm new password"
+                  variant="bordered"
+                  value={confirmPassword}
+                  onValueChange={setConfirmPassword}
+                  endContent={
+                    <button
+                      className="focus:outline-none"
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label="toggle confirm password visibility"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-4 h-4 text-default-400 pointer-events-none" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-default-400 pointer-events-none" />
+                      )}
+                    </button>
+                  }
+                />
                 <Button
                   onPress={handleChangePassword}
                   isDisabled={!oldPassword || !newPassword || newPassword !== confirmPassword}
@@ -1127,11 +1195,27 @@ function SettingsContent() {
                   ))}
                 </Select>
                 <Input
-                  type="password"
+                  type={showModalPassword ? "text" : "password"}
                   label={editingUser ? "New Password (leave empty to keep)" : "Password"}
+                  placeholder={editingUser ? "Leave empty to keep current password" : "Enter password"}
+                  variant="bordered"
                   value={modalForm.password}
                   onValueChange={(v) => setModalForm({ ...modalForm, password: v })}
                   isRequired={!editingUser}
+                  endContent={
+                    <button
+                      className="focus:outline-none"
+                      type="button"
+                      onClick={() => setShowModalPassword(!showModalPassword)}
+                      aria-label="toggle user password visibility"
+                    >
+                      {showModalPassword ? (
+                        <EyeOff className="w-4 h-4 text-default-400 pointer-events-none" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-default-400 pointer-events-none" />
+                      )}
+                    </button>
+                  }
                 />
               </ModalBody>
               <ModalFooter>
