@@ -10,6 +10,7 @@ import jwt from "jsonwebtoken";
 
 import { getSystemSettingsServer } from "@/src/lib/getSystemSettings";
 import { resend, getResendFrom, buildTransactionalEmailHtml } from "@/src/lib/emailTemplates";
+import { checkAndRecordOtpRateLimit } from "@/lib/otpRateLimiter";
 
 
 // ==================== GET - Fetch user(s) ====================
@@ -223,6 +224,16 @@ export async function POST(req: Request) {
       if ((existing as any[]).length > 0) {
         return NextResponse.json({ error: "Email already exists" }, { status: 400 });
       }
+
+      // Check OTP rate limit & progressive penalty
+      const rateLimit = await checkAndRecordOtpRateLimit(db, email, "signup");
+      if (!rateLimit.allowed) {
+        return NextResponse.json(
+          { error: rateLimit.error, retryAfter: rateLimit.retryAfter, cooldown: rateLimit.cooldown },
+          { status: 429 }
+        );
+      }
+
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expires = new Date(Date.now() + 10 * 60 * 1000);
       await db.query(
@@ -251,7 +262,7 @@ export async function POST(req: Request) {
         console.error("Error sending OTP email:", emailError);
         return NextResponse.json({ error: "Failed to send OTP email" }, { status: 500 });
       }
-      return NextResponse.json({ message: "OTP sent" });
+      return NextResponse.json({ message: "OTP sent", cooldown: rateLimit.cooldown });
     }
 
     // ✅ 4. Verify OTP – supports both registration and forgot password flows
@@ -473,6 +484,16 @@ export async function POST(req: Request) {
       if ((users as any[]).length === 0) {
         return NextResponse.json({ error: "No account found with this email" }, { status: 404 });
       }
+
+      // Check OTP rate limit & progressive penalty
+      const rateLimit = await checkAndRecordOtpRateLimit(db, email, "forgot_password");
+      if (!rateLimit.allowed) {
+        return NextResponse.json(
+          { error: rateLimit.error, retryAfter: rateLimit.retryAfter, cooldown: rateLimit.cooldown },
+          { status: 429 }
+        );
+      }
+
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expires = new Date(Date.now() + 15 * 60 * 1000);
       await db.query(
@@ -501,7 +522,7 @@ export async function POST(req: Request) {
         console.error("Error sending password reset email:", emailError);
         return NextResponse.json({ error: "Failed to send password reset email" }, { status: 500 });
       }
-      return NextResponse.json({ message: "Reset code sent to email" });
+      return NextResponse.json({ message: "Reset code sent to email", cooldown: rateLimit.cooldown });
     }
 
     // ✅ 10. Reset Password

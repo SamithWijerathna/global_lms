@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { resend, getResendFrom, buildTransactionalEmailHtml } from "@/src/lib/emailTemplates";
 import { getSystemSettingsServer } from "@/src/lib/getSystemSettings";
+import { checkAndRecordOtpRateLimit } from "@/lib/otpRateLimiter";
 
 
 async function getCurrentUser(req: Request, db: any) {
@@ -193,6 +194,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No admin account found with this email" }, { status: 404 });
     }
 
+    // Check OTP rate limit & progressive penalty
+    const rateLimit = await checkAndRecordOtpRateLimit(db, email, "admin_forgot_password");
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: rateLimit.error, retryAfter: rateLimit.retryAfter, cooldown: rateLimit.cooldown },
+        { status: 429 }
+      );
+    }
+
     // Ensure admin_password_resets table exists
     await db.query(`
       CREATE TABLE IF NOT EXISTS admin_password_resets (
@@ -235,7 +245,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to send password reset email" }, { status: 500 });
     }
 
-    return NextResponse.json({ message: "Admin reset code sent to email" });
+    return NextResponse.json({ message: "Admin reset code sent to email", cooldown: rateLimit.cooldown });
   }
 
   // ✅ Admin Verify OTP

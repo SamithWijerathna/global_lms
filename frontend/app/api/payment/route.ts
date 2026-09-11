@@ -123,6 +123,10 @@ export async function GET(req: Request) {
             u.student_id,
             'Unknown Student'
           ) AS student_name,
+          u.phone AS student_phone,
+          u.user_email AS student_email,
+          u.profile_url AS student_profile_url,
+          u.batch AS student_batch,
           COALESCE(c.class_title, 'Unknown Class') AS class_title
         FROM payments p
         LEFT JOIN users u ON (p.student_uuid = u.uuid OR p.student_uuid = u.student_id OR p.student_uuid = CAST(u.id AS CHAR))

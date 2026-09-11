@@ -434,6 +434,22 @@ export async function healDatabase(pool: mysql.Pool, force = false): Promise<{ s
           PRIMARY KEY (id),
           UNIQUE KEY email (email)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      },
+      {
+        name: "otp_rate_limits",
+        sql: `CREATE TABLE IF NOT EXISTS otp_rate_limits (
+          id INT NOT NULL AUTO_INCREMENT,
+          email VARCHAR(255) NOT NULL,
+          flow_type VARCHAR(50) NOT NULL DEFAULT 'general',
+          send_count INT NOT NULL DEFAULT 1,
+          cooldown_seconds INT NOT NULL DEFAULT 60,
+          last_sent_at DATETIME NOT NULL,
+          blocked_until DATETIME DEFAULT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY uq_email_flow (email, flow_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
       }
     ];
 

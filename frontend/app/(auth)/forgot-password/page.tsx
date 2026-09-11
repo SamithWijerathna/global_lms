@@ -20,12 +20,37 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const formatCooldown = (seconds: number) => {
+    if (seconds <= 0) return "";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m > 0) {
+      return `${m}m ${s < 10 ? "0" : ""}${s}s`;
+    }
+    return `${s}s`;
+  };
 
   const toggleNew = () => setIsVisibleNew(!isVisibleNew);
   const toggleConfirm = () => setIsVisibleConfirm(!isVisibleConfirm);
 
   const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
+
+    if (resendCooldown > 0) {
+      setError(`Please wait ${formatCooldown(resendCooldown)} before requesting another code.`);
+      return;
+    }
+
     setError("");
     setSuccessMessage("");
     setIsLoading(true);
@@ -43,11 +68,15 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 429 && data.retryAfter) {
+          setResendCooldown(Number(data.retryAfter));
+        }
         setError(data.error || "Failed to send reset code");
         return;
       }
 
       setSuccessMessage("Reset code sent to your email");
+      setResendCooldown(data.cooldown || 60);
       setStep("otp");
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -220,7 +249,7 @@ export default function ForgotPasswordPage() {
               </Button>
             </Form>
 
-            <div className="text-center">
+            <div className="flex items-center justify-between w-full pt-1">
               <button
                 type="button"
                 onClick={() => {
@@ -229,9 +258,23 @@ export default function ForgotPasswordPage() {
                   setSuccessMessage("");
                   setError("");
                 }}
-                className="text-small text-primary hover:underline"
+                className="text-small text-default-500 hover:text-foreground transition-colors"
               >
-                Back to email
+                Change email
+              </button>
+              <button
+                type="button"
+                disabled={isLoading || resendCooldown > 0}
+                onClick={handleSendOtp}
+                className={`text-small font-semibold ${
+                  resendCooldown > 0
+                    ? "text-default-400 cursor-not-allowed"
+                    : "text-primary hover:underline"
+                }`}
+              >
+                {resendCooldown > 0
+                  ? `Resend in ${formatCooldown(resendCooldown)}`
+                  : "Resend Code"}
               </button>
             </div>
           </>

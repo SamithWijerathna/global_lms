@@ -119,7 +119,32 @@ export default function Signup() {
     profile_pic: null as File | null,
   });
 
+  const [resendCooldown, setResendCooldown] = React.useState(0);
+
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const formatCooldown = (seconds: number) => {
+    if (seconds <= 0) return "";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m > 0) {
+      return `${m}m ${s < 10 ? "0" : ""}${s}s`;
+    }
+    return `${s}s`;
+  };
+
   const sendOtp = async () => {
+    if (resendCooldown > 0) {
+      setError(`Please wait ${formatCooldown(resendCooldown)} before requesting another code.`);
+      return;
+    }
+
     setError("");
     setIsLoading(true);
 
@@ -138,11 +163,15 @@ export default function Signup() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 429 && data.retryAfter) {
+          setResendCooldown(Number(data.retryAfter));
+        }
         setError(data.error || "Failed to send OTP");
         return;
       }
 
       setSuccessMessage("OTP sent to your email");
+      setResendCooldown(data.cooldown || 60);
       setStep(2);
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -387,9 +416,12 @@ export default function Signup() {
               variant="light"
               size="sm"
               onPress={sendOtp}
-              className="text-default-500"
+              isDisabled={isLoading || resendCooldown > 0}
+              className="text-default-500 font-medium"
             >
-              Resend OTP
+              {resendCooldown > 0
+                ? `Resend OTP in ${formatCooldown(resendCooldown)}`
+                : "Resend OTP"}
             </Button>
           </Form>
         )}

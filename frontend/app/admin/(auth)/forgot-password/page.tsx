@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody } from "@heroui/card";
@@ -23,6 +23,25 @@ export default function AdminForgotPasswordPage() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const formatCooldown = (seconds: number) => {
+    if (seconds <= 0) return "";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m > 0) {
+      return `${m}m ${s < 10 ? "0" : ""}${s}s`;
+    }
+    return `${s}s`;
+  };
 
   // Auto-redirect on success
   useEffect(() => {
@@ -41,7 +60,13 @@ export default function AdminForgotPasswordPage() {
   }, [step, countdown, router]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
+
+    if (resendCooldown > 0) {
+      setError(`Please wait ${formatCooldown(resendCooldown)} before requesting another code.`);
+      return;
+    }
+
     setError("");
     setSuccessMessage("");
     setIsLoading(true);
@@ -59,11 +84,15 @@ export default function AdminForgotPasswordPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 429 && data.retryAfter) {
+          setResendCooldown(Number(data.retryAfter));
+        }
         setError(data.error || "Failed to send reset code.");
         return;
       }
 
       setSuccessMessage("Verification code sent to your admin email.");
+      setResendCooldown(data.cooldown || 60);
       setStep(2);
     } catch (err) {
       setError("A network error occurred. Please try again.");
@@ -267,10 +296,16 @@ export default function AdminForgotPasswordPage() {
                 <button
                   type="button"
                   onClick={handleSendOTP}
-                  disabled={isLoading}
-                  className="text-primary hover:underline font-semibold"
+                  disabled={isLoading || resendCooldown > 0}
+                  className={`font-semibold ${
+                    resendCooldown > 0
+                      ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                      : "text-primary hover:underline"
+                  }`}
                 >
-                  Resend Code
+                  {resendCooldown > 0
+                    ? `Resend in ${formatCooldown(resendCooldown)}`
+                    : "Resend Code"}
                 </button>
               </div>
             </form>
