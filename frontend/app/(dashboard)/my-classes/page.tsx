@@ -322,34 +322,39 @@ function MaterialViewer({
           {/* Player / Content Viewer Section */}
           <div className="p-4 md:p-8 bg-black/90 dark:bg-black">
             {material.material_type === "video" && material.material_video_url && (
-              <div
-                className="relative overflow-hidden rounded-xl bg-black shadow-2xl"
-                style={{ paddingBottom: "56.25%" }}
-                onContextMenu={(e) => e.preventDefault()}
-                onSelectStart={(e) => e.preventDefault()}
-              >
-                <video
-                  ref={videoRef}
-                  controls
-                  controlsList="nodownload nofullscreen"
-                  disablePictureInPicture
-                  className="absolute inset-0 h-full w-full"
-                  preload="metadata"
-                  playsInline
-                  onPlay={handlePlay}
-                  onPause={handleStop}
-                  onEnded={handleStop}
-                  onTimeUpdate={handleStop}
+              getYouTubeId(material.material_video_url) ? (
+                <div className="w-full relative rounded-xl overflow-hidden shadow-2xl">
+                  <ProtectedYouTubePlayer url={material.material_video_url} watermarkText={watermarkText} />
+                </div>
+              ) : (
+                <div
+                  className="relative overflow-hidden rounded-xl bg-black shadow-2xl select-none"
+                  style={{ paddingBottom: "56.25%" }}
+                  onContextMenu={(e) => e.preventDefault()}
                 >
-                  <source src={material.material_video_url} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-                <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-                  <div className="absolute text-white/30 text-xl md:text-2xl font-bold select-none animate-watermark-roam drop-shadow-md whitespace-nowrap">
-                    {watermarkText}
+                  <video
+                    ref={videoRef}
+                    controls
+                    controlsList="nodownload nofullscreen"
+                    disablePictureInPicture
+                    className="absolute inset-0 h-full w-full"
+                    preload="metadata"
+                    playsInline
+                    onPlay={handlePlay}
+                    onPause={handleStop}
+                    onEnded={handleStop}
+                    onTimeUpdate={handleStop}
+                  >
+                    <source src={material.material_video_url} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                  <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                    <div className="absolute text-white/30 text-xl md:text-2xl font-bold select-none animate-watermark-roam drop-shadow-md whitespace-nowrap">
+                      {watermarkText}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )
             )}
 
             {material.material_pdf_url && (

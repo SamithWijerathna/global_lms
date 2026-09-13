@@ -5,11 +5,49 @@ import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Gauge, Settings } fr
 import { useSystemSettings } from "@/src/lib/useSystemSettings";
 import { useAuth } from "@/src/lib/useAuth";
 
-export function getYouTubeId(url: string): string | null {
+export function getYouTubeId(url: string | null | undefined): string | null {
   if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return match && match[2].length === 11 ? match[2] : null;
+  const cleanUrl = url.trim();
+
+  // If already an 11-character video ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanUrl)) {
+    return cleanUrl;
+  }
+
+  // Common YouTube URL regex covering:
+  // - youtube.com/live/ID (e.g. https://youtube.com/live/cu0oeb-GI6M?feature=share)
+  // - youtu.be/ID
+  // - youtube.com/watch?v=ID or with other params &v=ID
+  // - youtube.com/shorts/ID
+  // - youtube.com/embed/ID
+  // - youtube.com/v/ID
+  // - youtube.com/user/...
+  const regExp = /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|live\/|shorts\/|user\/\S+\/|watch\?(?:.*&)?v=|(?:.*&)?v=))([a-zA-Z0-9_-]{11})/;
+  const match = cleanUrl.match(regExp);
+  if (match && match[1]) {
+    return match[1];
+  }
+
+  // Fallback using URL parser
+  try {
+    const parsed = new URL(cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`);
+    if (parsed.hostname.includes("youtube.com") || parsed.hostname.includes("youtu.be")) {
+      const v = parsed.searchParams.get("v");
+      if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      if (parsed.hostname.includes("youtu.be") && segments.length >= 1) {
+        if (/^[a-zA-Z0-9_-]{11}$/.test(segments[0])) return segments[0];
+      }
+      if (segments.length >= 2 && ["live", "shorts", "embed", "v"].includes(segments[0])) {
+        if (/^[a-zA-Z0-9_-]{11}$/.test(segments[1])) return segments[1];
+      }
+    }
+  } catch (e) {
+    // Ignore URL parse errors
+  }
+
+  return null;
 }
 
 export function getYouTubeThumbnail(url: string | null | undefined): string | null {

@@ -5,11 +5,49 @@ import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Gauge, Settings } fr
 import { useSystemSettings } from "@/src/lib/useSystemSettings";
 import { useAuth } from "@/src/lib/useAuth";
 
-export function getYouTubeId(url: string): string | null {
+export function getYouTubeId(url: string | null | undefined): string | null {
   if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return match && match[2].length === 11 ? match[2] : null;
+  const cleanUrl = url.trim();
+
+  // If already an 11-character video ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanUrl)) {
+    return cleanUrl;
+  }
+
+  // Common YouTube URL regex covering:
+  // - youtube.com/live/ID (e.g. https://youtube.com/live/cu0oeb-GI6M?feature=share)
+  // - youtu.be/ID
+  // - youtube.com/watch?v=ID or with other params &v=ID
+  // - youtube.com/shorts/ID
+  // - youtube.com/embed/ID
+  // - youtube.com/v/ID
+  // - youtube.com/user/...
+  const regExp = /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|live\/|shorts\/|user\/\S+\/|watch\?(?:.*&)?v=|(?:.*&)?v=))([a-zA-Z0-9_-]{11})/;
+  const match = cleanUrl.match(regExp);
+  if (match && match[1]) {
+    return match[1];
+  }
+
+  // Fallback using URL parser
+  try {
+    const parsed = new URL(cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`);
+    if (parsed.hostname.includes("youtube.com") || parsed.hostname.includes("youtu.be")) {
+      const v = parsed.searchParams.get("v");
+      if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      if (parsed.hostname.includes("youtu.be") && segments.length >= 1) {
+        if (/^[a-zA-Z0-9_-]{11}$/.test(segments[0])) return segments[0];
+      }
+      if (segments.length >= 2 && ["live", "shorts", "embed", "v"].includes(segments[0])) {
+        if (/^[a-zA-Z0-9_-]{11}$/.test(segments[1])) return segments[1];
+      }
+    }
+  } catch (e) {
+    // Ignore URL parse errors
+  }
+
+  return null;
 }
 
 export function getYouTubeThumbnail(url: string | null | undefined): string | null {
@@ -68,7 +106,7 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
   const displayWatermark = watermarkText || (user?.student_id ? `${brandName} - ${user.student_id}` : `${brandName} Protected`);
   const videoId = getYouTubeId(url);
   const containerRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerMountRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -77,6 +115,7 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
   const [currentTime, setCurrentTime] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [isLive, setIsLive] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [currentQuality, setCurrentQuality] = useState("auto");
   const [availableQualities, setAvailableQualities] = useState<string[]>([]);
@@ -87,15 +126,25 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
   useEffect(() => {
     if (!videoId) return;
 
+    let isSubscribed = true;
+
     const initPlayer = () => {
-      if (!iframeRef.current) return;
+      if (!playerMountRef.current || !isSubscribed) return;
       
       // Clean up previous instance
       if (playerRef.current && playerRef.current.destroy) {
-        playerRef.current.destroy();
+        try {
+          playerRef.current.destroy();
+        } catch (e) {}
       }
 
-      playerRef.current = new window.YT.Player(iframeRef.current, {
+      // Fresh DOM node for YouTube iframe replacement to prevent detachment
+      playerMountRef.current.innerHTML = "";
+      const mountDiv = document.createElement("div");
+      mountDiv.className = "w-full h-full";
+      playerMountRef.current.appendChild(mountDiv);
+
+      playerRef.current = new window.YT.Player(mountDiv, {
         videoId,
         playerVars: {
           controls: 0,
@@ -107,11 +156,21 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
           iv_load_policy: 3,
           playsinline: 1,
           autohide: 1,
+          enablejsapi: 1,
+          origin: typeof window !== "undefined" ? window.location.origin : undefined,
         },
         events: {
           onReady: (event: any) => {
+            if (!isSubscribed) return;
             setIsReady(true);
-            setDuration(event.target.getDuration());
+            const dur = event.target.getDuration ? event.target.getDuration() : 0;
+            setDuration(dur || 0);
+
+            const videoData = event.target.getVideoData ? event.target.getVideoData() : null;
+            if (videoData?.isLive || dur === 0) {
+              setIsLive(true);
+            }
+
             if (event.target.getAvailableQualityLevels) {
               const qualities = event.target.getAvailableQualityLevels();
               if (Array.isArray(qualities) && qualities.length > 0) {
@@ -120,9 +179,10 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
             }
           },
           onStateChange: (event: any) => {
+            if (!isSubscribed) return;
             // YT.PlayerState.PLAYING = 1, PAUSED = 2, ENDED = 0
             if (event.data === 1) setIsPlaying(true);
-            else setIsPlaying(false);
+            else if (event.data === 2 || event.data === 0) setIsPlaying(false);
           },
         },
       });
@@ -147,8 +207,11 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
     }
 
     return () => {
+      isSubscribed = false;
       if (playerRef.current && playerRef.current.destroy) {
-        playerRef.current.destroy();
+        try {
+          playerRef.current.destroy();
+        } catch (e) {}
       }
     };
   }, [videoId]);
@@ -156,10 +219,19 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
   // Sync progress timer & state
   useEffect(() => {
     let interval: any;
-    if (isPlaying && playerRef.current && playerRef.current.getCurrentTime) {
+    if (isPlaying && playerRef.current) {
       interval = setInterval(() => {
-        setCurrentTime(playerRef.current.getCurrentTime() || 0);
-        setDuration(playerRef.current.getDuration() || 0);
+        if (playerRef.current.getCurrentTime) {
+          setCurrentTime(playerRef.current.getCurrentTime() || 0);
+        }
+        if (playerRef.current.getDuration) {
+          const dur = playerRef.current.getDuration() || 0;
+          setDuration(dur);
+        }
+        if (playerRef.current.getVideoData) {
+          const data = playerRef.current.getVideoData();
+          if (data?.isLive) setIsLive(true);
+        }
         if (playerRef.current.getAvailableQualityLevels) {
           const qualities = playerRef.current.getAvailableQualityLevels();
           if (Array.isArray(qualities) && qualities.length > 0) {
@@ -259,7 +331,7 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
       {/* YouTube Iframe container - cropped scale hides top/bottom letterboxing black bars */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden bg-black">
         <div 
-          ref={iframeRef} 
+          ref={playerMountRef} 
           className="absolute w-[130%] h-[130%] -top-[15%] -left-[15%] pointer-events-none object-cover" 
         />
       </div>
@@ -282,6 +354,9 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
             <Play className="w-8 h-8 fill-current ml-1" />
           </div>
         )}
+        {!isReady && (
+          <div className="w-10 h-10 rounded-full border-2 border-white/20 border-t-primary animate-spin" />
+        )}
       </div>
 
       {/* Custom Control Bar (Play/Pause, Scrubber, Speed, Quality, Fullscreen) */}
@@ -289,16 +364,22 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
         className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-3 pt-6 flex flex-col gap-2 opacity-100 transition-opacity duration-300"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Progress Bar */}
-        <input
-          type="range"
-          min={0}
-          max={duration || 100}
-          step={0.1}
-          value={currentTime}
-          onChange={handleSeek}
-          className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary hover:h-2 transition-all"
-        />
+        {/* Progress Bar / Live Stream Indicator */}
+        {isLive && (!duration || duration <= 0) ? (
+          <div className="w-full h-1.5 bg-red-600/30 rounded-lg overflow-hidden relative">
+            <div className="absolute inset-0 bg-red-600/80 animate-pulse rounded-lg" />
+          </div>
+        ) : (
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.1}
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary hover:h-2 transition-all"
+          />
+        )}
 
         <div className="flex items-center justify-between text-white text-xs px-1">
           <div className="flex items-center gap-3">
@@ -322,10 +403,17 @@ export default function ProtectedYouTubePlayer({ url, watermarkText, className =
               {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
 
-            {/* Time display */}
-            <span className="font-mono text-white/90 text-xs">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
+            {/* Time display or Live indicator */}
+            {isLive ? (
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-600/90 text-white text-[10px] font-bold tracking-wider uppercase shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                LIVE
+              </span>
+            ) : (
+              <span className="font-mono text-white/90 text-xs">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
